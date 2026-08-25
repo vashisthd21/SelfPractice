@@ -2,11 +2,13 @@
   "name": "examlens",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "client",
+    "server"
+  ],
   "scripts": {
-    "postinstall": "npm --prefix client install",
-    "install:all": "npm --prefix server install && npm --prefix client install",
-    "dev": "concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
     "build": "npm --prefix client run build",
+    "dev": "concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
     "start": "node server/src/index.js"
   },
   "dependencies": {
