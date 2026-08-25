@@ -476,10 +476,123 @@ header {
   background: #faf5ff;
 }
 
+.auth-modal-box {
+  max-width: 440px;
+  width: 100%;
+  border-radius: 18px;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
+  border: 1px solid var(--border-color);
+}
+
 .auth-form-body {
-  padding: 20px;
+  padding: 22px 24px;
   display: grid;
   gap: 14px;
+}
+
+.google-btn-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.google-gsi-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 40px;
+}
+
+.google-auth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 44px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+}
+
+.google-auth-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 2px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.auth-divider span {
+  padding: 0 10px;
+}
+
+.auth-email-form {
+  display: grid;
+  gap: 14px;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-with-icon input {
+  width: 100% !important;
+  flex: 1;
+  height: 44px !important;
+  padding: 0 14px 0 40px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 9px !important;
+  font-family: inherit;
+  font-size: 14px !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-sizing: border-box !important;
+  transition: all 0.15s ease;
+}
+
+.input-with-icon input:focus {
+  border-color: var(--primary) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+.input-with-icon .input-icon {
+  position: absolute;
+  left: 13px;
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .role-selector-pills {
@@ -517,7 +630,8 @@ header {
   height: 44px;
   font-size: 14px;
   font-weight: 700;
-  margin-top: 6px;
+  margin-top: 4px;
+  width: 100%;
 }
 
 .auth-modal-footer {

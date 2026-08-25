@@ -262,7 +262,10 @@ function App() {
 
       const res = await authApi.post('/exams/create', payload);
       setPublishedExam(res.data.exam);
-      loadUserAccountData();
+      setCreatorExam(null);
+      setCreatorAnswerKey(null);
+      setCreatorExamTitle('');
+      await loadUserAccountData();
       setScreen('publish-success');
     } catch (e) {
       setError(e.response?.data?.message || e.message);

@@ -874,6 +874,76 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Google OAuth Authentication
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { credential, profile, role } = req.body;
+    let name = '';
+    let email = '';
+    let avatar = '';
+
+    if (credential) {
+      // Decode Google JWT
+      const parts = credential.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+        email = payload.email ? payload.email.toLowerCase() : '';
+        name = payload.name || payload.given_name || 'Google User';
+        avatar = payload.picture || '';
+      }
+    } else if (profile) {
+      email = profile.email ? profile.email.toLowerCase() : '';
+      name = profile.name || 'Google User';
+      avatar = profile.avatar || profile.picture || '';
+    }
+
+    if (!email) {
+      return res.status(400).json({ message: 'Could not extract valid Google email' });
+    }
+
+    let user = await findUserByEmail(email);
+
+    if (!user) {
+      user = {
+        id: `usr_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`,
+        name: clean(name) || 'Google User',
+        email: email,
+        role: role === 'teacher' ? 'teacher' : 'student',
+        authProvider: 'google',
+        avatar: avatar,
+        passwordHash: '',
+        passwordSalt: '',
+        createdAt: new Date().toISOString()
+      };
+      await saveUser(user);
+    }
+
+    const token = createToken({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar
+    });
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (e) {
+    console.error('Google auth error:', e);
+    res.status(500).json({ message: 'Google authentication failed', error: e.message });
+  }
+});
+
 app.get('/api/auth/me', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ message: 'Not authenticated' });
@@ -993,6 +1063,70 @@ app.post('/api/exams/create', async (req, res) => {
   } catch (e) {
     console.error('Exam creation error:', e);
     res.status(500).json({ message: 'Could not create exam', error: e.message });
+  }
+});
+
+// List all hosted exams
+app.get('/api/exams', async (req, res) => {
+  try {
+    const exams = await getAllExams();
+    const summaries = exams.map((e) => ({
+      id: e.id,
+      code: e.code,
+      title: e.title,
+      creatorName: e.creatorName,
+      creatorId: e.creatorId,
+      creatorEmail: e.creatorEmail,
+      totalQuestions: e.questions ? e.questions.length : 0,
+      config: e.config,
+      createdAt: e.createdAt
+    }));
+    res.json(summaries);
+  } catch (e) {
+    console.error('Fetch all exams error:', e);
+    res.status(500).json({ message: 'Failed to fetch exams', error: e.message });
+  }
+});
+
+// List exams created by user (or all if guest/admin)
+app.get('/api/exams/my-created', async (req, res) => {
+  try {
+    const allExams = await getAllExams();
+    const userExams = req.user
+      ? allExams.filter(
+          (e) =>
+            e.creatorId === req.user.id ||
+            (e.creatorEmail && req.user.email && e.creatorEmail.toLowerCase() === req.user.email.toLowerCase())
+        )
+      : allExams;
+
+    const summaries = userExams.map((e) => ({
+      id: e.id,
+      code: e.code,
+      title: e.title,
+      creatorName: e.creatorName,
+      creatorId: e.creatorId,
+      creatorEmail: e.creatorEmail,
+      totalQuestions: e.questions ? e.questions.length : 0,
+      config: e.config,
+      createdAt: e.createdAt
+    }));
+    res.json(summaries);
+  } catch (e) {
+    console.error('Fetch my-created exams error:', e);
+    res.status(500).json({ message: 'Failed to fetch created exams', error: e.message });
+  }
+});
+
+// List student's own attempts
+app.get('/api/attempts/my-attempts', async (req, res) => {
+  try {
+    if (!req.user) return res.json([]);
+    const userAttempts = await getAttemptsByUser(req.user.id, req.user.email);
+    res.json(userAttempts);
+  } catch (e) {
+    console.error('Fetch my-attempts error:', e);
+    res.status(500).json({ message: 'Failed to fetch attempts', error: e.message });
   }
 });
 

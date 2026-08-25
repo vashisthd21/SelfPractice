@@ -1,8 +1,18 @@
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 
-const MONGODB_URI = process.env.MONGODB_URI || process.env.DATABASE_URL || process.env.MONGO_URL || '';
+dotenv.config();
+
+function getMongoUri() {
+  let rawUri = process.env.MONGODB_URI || process.env.DATABASE_URL || process.env.MONGO_URL || '';
+  // Auto-sanitize if password was pasted with angle brackets: :<password>@ -> :password@
+  if (rawUri && /:<([^>]+)>@/.test(rawUri)) {
+    rawUri = rawUri.replace(/:<([^>]+)>@/, ':$1@');
+  }
+  return rawUri;
+}
 
 // Fallback filesystem storage path
 const dataDir = process.env.VERCEL ? '/tmp' : path.resolve('data');
@@ -39,9 +49,11 @@ const UserSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true, index: true },
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, index: true },
-  passwordHash: { type: String, required: true },
-  passwordSalt: { type: String, required: true },
+  passwordHash: { type: String, default: '' },
+  passwordSalt: { type: String, default: '' },
   role: { type: String, default: 'student' },
+  authProvider: { type: String, default: 'local' },
+  avatar: { type: String, default: '' },
   createdAt: { type: String, default: () => new Date().toISOString() }
 }, { timestamps: true });
 
@@ -85,7 +97,8 @@ let Attempt = null;
 let isMongoConnected = false;
 
 export async function connectDB() {
-  if (!MONGODB_URI) {
+  const uri = getMongoUri();
+  if (!uri) {
     console.log('ℹ️  No MONGODB_URI configured. Running with local filesystem storage.');
     return false;
   }
@@ -96,7 +109,7 @@ export async function connectDB() {
 
   try {
     mongoose.set('strictQuery', false);
-    await mongoose.connect(MONGODB_URI, {
+    await mongoose.connect(uri, {
       dbName: process.env.MONGODB_DB || 'examlens',
       serverSelectionTimeoutMS: 6000
     });
