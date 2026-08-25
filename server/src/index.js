@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const MAX_MB = Number(process.env.MAX_FILE_SIZE_MB || 20);
 
-app.use(cors({ origin: CLIENT_URL }));
+app.use(cors({ origin: true }));
 app.use(express.json({ limit: '2mb' }));
 
 const upload = multer({
@@ -21,12 +21,25 @@ const upload = multer({
   fileFilter: (r, f, cb) => cb(null, f.mimetype === 'application/pdf' || f.originalname.toLowerCase().endsWith('.pdf'))
 });
 
-const dataDir = path.resolve('data');
-fs.mkdirSync(dataDir, { recursive: true });
+const dataDir = process.env.VERCEL ? '/tmp' : path.resolve('data');
+try {
+  fs.mkdirSync(dataDir, { recursive: true });
+} catch (e) {}
+
 const attemptsFile = path.join(dataDir, 'attempts.json');
-if (!fs.existsSync(attemptsFile)) fs.writeFileSync(attemptsFile, '[]');
-const readAttempts = () => JSON.parse(fs.readFileSync(attemptsFile, 'utf8'));
-const writeAttempts = (x) => fs.writeFileSync(attemptsFile, JSON.stringify(x, null, 2));
+let inMemoryAttempts = [];
+const readAttempts = () => {
+  try {
+    if (fs.existsSync(attemptsFile)) return JSON.parse(fs.readFileSync(attemptsFile, 'utf8'));
+  } catch (e) {}
+  return inMemoryAttempts;
+};
+const writeAttempts = (x) => {
+  inMemoryAttempts = x;
+  try {
+    fs.writeFileSync(attemptsFile, JSON.stringify(x, null, 2));
+  } catch (e) {}
+};
 
 async function pdfText(buffer) {
   const doc = await getDocument({ data: new Uint8Array(buffer) }).promise;
