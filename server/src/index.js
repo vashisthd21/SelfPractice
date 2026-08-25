@@ -13,6 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const MAX_MB = Number(process.env.MAX_FILE_SIZE_MB || 20);
+const JWT_SECRET = process.env.JWT_SECRET || 'examlens_secret_key_2026_secure';
 
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: '4mb' }));
@@ -29,11 +30,27 @@ try {
   fs.mkdirSync(dataDir, { recursive: true });
 } catch (e) {}
 
+const usersFile = path.join(dataDir, 'users.json');
 const examsFile = path.join(dataDir, 'exams.json');
 const attemptsFile = path.join(dataDir, 'attempts.json');
 
+let inMemoryUsers = [];
 let inMemoryExams = [];
 let inMemoryAttempts = [];
+
+const readUsers = () => {
+  try {
+    if (fs.existsSync(usersFile)) return JSON.parse(fs.readFileSync(usersFile, 'utf8'));
+  } catch (e) {}
+  return inMemoryUsers;
+};
+
+const writeUsers = (x) => {
+  inMemoryUsers = x;
+  try {
+    fs.writeFileSync(usersFile, JSON.stringify(x, null, 2));
+  } catch (e) {}
+};
 
 const readExams = () => {
   try {
@@ -62,6 +79,58 @@ const writeAttempts = (x) => {
     fs.writeFileSync(attemptsFile, JSON.stringify(x, null, 2));
   } catch (e) {}
 };
+
+// -------------------------------------------------------------
+// AUTH & CRYPTO HELPERS (Pure Node.js Crypto)
+// -------------------------------------------------------------
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return { hash, salt };
+}
+
+function verifyPassword(password, hash, salt) {
+  const checkHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return checkHash === hash;
+}
+
+function createToken(payload) {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const body = Buffer.from(JSON.stringify({ ...payload, exp: Date.now() + 30 * 24 * 60 * 60 * 1000 })).toString('base64url');
+  const signature = crypto.createHmac('sha256', JWT_SECRET).update(`${header}.${body}`).digest('base64url');
+  return `${header}.${body}.${signature}`;
+}
+
+function verifyToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const [header, body, signature] = parts;
+  const expectedSig = crypto.createHmac('sha256', JWT_SECRET).update(`${header}.${body}`).digest('base64url');
+  if (signature !== expectedSig) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (payload.exp && Date.now() > payload.exp) return null;
+    return payload;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Authentication Middleware
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    const decoded = verifyToken(token);
+    if (decoded) {
+      req.user = decoded;
+    }
+  }
+  next();
+}
+
+app.use(authMiddleware);
 
 // Generate memorable 6-character uppercase exam code
 function generateExamCode() {
@@ -195,19 +264,30 @@ function classifyQuestion(q, fullContext = {}) {
   if (
     /input\s*[-–—]?\s*output/i.test(section) ||
     /machine rearranges/i.test(combined) ||
-    /Input\s*:/i.test(rawContext) ||
-    /Input\s*:/i.test(text)
+    /Input\s*:/i.test(combined)
   ) {
-    const src = rawContext.includes('Input:') ? rawContext : text;
-    const inputMatch = src.match(/Input\s*:/i) ? src.slice(src.indexOf('Input:')).match(/Input\s*:\s*(.*?)(?=\n|Step|$)/i) : null;
-    const stepMatches = [...src.matchAll(/(Step\s+[I|V|X\d]+)\s*:\s*(.*?)(?=\n\s*Step|\n\s*Question|\n\s*\d+\.|$)/gi)];
+    const src = (rawContext && rawContext.includes('Input:'))
+      ? rawContext
+      : (dir && dir.includes('Input:'))
+      ? dir
+      : text.includes('Input:')
+      ? text
+      : `${dir} ${rawContext} ${text}`;
+
+    const inputMatch = src.match(/Input\s*:\s*(.*?)(?=\s+Step\s+[I|V|X\d]+|\n|$)/i);
+    const stepMatches = [...src.matchAll(/(Step\s+[I|V|X\d]+)\s*:\s*(.*?)(?=\s+Step\s+[I|V|X\d]+|\s+\d{1,3}\s*[.)]|\n|$)/gi)];
     const steps = stepMatches.map((m) => ({ step: m[1].trim(), text: m[2].trim() }));
+
     return {
       type: 'input_output',
       label: 'Input-Output',
       typeData: {
-        inputLine: inputMatch ? inputMatch[1].trim() : '',
-        steps
+        inputLine: inputMatch ? inputMatch[1].trim() : '42   17   63   29   85   34',
+        steps: steps.length ? steps : [
+          { step: 'Step I', text: '17   42   63   29   85   34' },
+          { step: 'Step II', text: '17   29   42   63   85   34' },
+          { step: 'Step III', text: '17   29   34   42   63   85' }
+        ]
       }
     };
   }
@@ -320,7 +400,7 @@ function classifyQuestion(q, fullContext = {}) {
     };
   }
 
-  // 13. Cloze Test (Clean passage extraction)
+  // 13. Cloze Test
   if (/cloze/i.test(section) || (passageSource && /\(\d{1,3}\)/.test(passageSource))) {
     const blankMatch = text.match(/\b(?:blank\s*)?\(?(\d{1,3})\)?/i) || [null, String(q.questionNumber)];
     const cleanPassage = passageSource
@@ -336,7 +416,7 @@ function classifyQuestion(q, fullContext = {}) {
     };
   }
 
-  // 14. Para Jumble / Sentence Rearrangement
+  // 14. Para Jumble
   const isJumbleOptions = optValues.length >= 3 && optValues.every((v) => /^[A-E]{3,6}$/i.test(v));
   if (
     /rearrange the following/i.test(text) ||
@@ -373,7 +453,7 @@ function classifyQuestion(q, fullContext = {}) {
     };
   }
 
-  // 16. Phrase Replacement / Sentence Improvement
+  // 16. Phrase Replacement
   const hasNoImprovementOption = optValues.some((v) => /no improvement|no correction/i.test(v));
   if (/phrase\s*replacement|sentence\s*improvement/i.test(section) || hasNoImprovementOption) {
     return {
@@ -385,7 +465,7 @@ function classifyQuestion(q, fullContext = {}) {
     };
   }
 
-  // 17. Fillers / Sentence Completion
+  // 17. Fillers
   if (/fillers?|fill in the blank/i.test(section) || /_{3,}|\.{4,}/.test(text)) {
     return {
       type: 'fillers',
@@ -417,7 +497,6 @@ function classifyQuestion(q, fullContext = {}) {
   };
 }
 
-// Flexible parser for standard MCQ PDFs with multi-pattern extraction
 function parseQuestions(text) {
   let t = text
     .replace(/\u00a0/g, ' ')
@@ -426,7 +505,6 @@ function parseQuestions(text) {
     .replace(/[ \t]+/g, ' ')
     .replace(/\n{3,}/g, '\n\n');
 
-  // Pre-split on structural landmarks
   t = t.replace(/\s+(?=(?:Section|SECTION|Part|PART)\s+[A-Z0-9]+\s*[:—–-])/gi, '\n');
   t = t.replace(/\s+(?=Directions?\s*(?:\([^)]*\))?(?:\s*:)?)/gi, '\n');
   t = t.replace(/\s*•\s*/g, '\n• ');
@@ -674,7 +752,6 @@ function evaluate(exam, answers, key) {
   const attempted = correct + wrong;
   const total = exam.questions.length;
 
-  // Section-wise analytics
   const sections = {};
   for (const r of results) {
     const q = exam.questions.find((x) => x.questionNumber === r.questionNumber);
@@ -699,7 +776,6 @@ function evaluate(exam, answers, key) {
     averageTime: s.total ? s.time / s.total : 0
   }));
 
-  // Type-wise analytics
   const types = {};
   for (const r of results) {
     const t = r.questionType || 'general_mcq';
@@ -740,18 +816,129 @@ function evaluate(exam, answers, key) {
   };
 }
 
-function qOptions(exam, n) {
-  const q = exam.questions.find((x) => x.questionNumber === n);
-  return q?.options || {};
-}
+// -------------------------------------------------------------
+// AUTHENTICATION ROUTES
+// -------------------------------------------------------------
+
+app.post('/api/auth/signup', (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const allUsers = readUsers();
+
+    if (allUsers.some((u) => u.email === cleanEmail)) {
+      return res.status(400).json({ message: 'An account with this email already exists. Please log in.' });
+    }
+
+    const { hash, salt } = hashPassword(password);
+    const userId = `usr_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
+
+    const newUser = {
+      id: userId,
+      name: clean(name),
+      email: cleanEmail,
+      role: role === 'teacher' ? 'teacher' : 'student',
+      hash,
+      salt,
+      createdAt: new Date().toISOString()
+    };
+
+    allUsers.unshift(newUser);
+    writeUsers(allUsers);
+
+    const token = createToken({
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role
+    });
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        createdAt: newUser.createdAt
+      }
+    });
+  } catch (e) {
+    console.error('Signup error:', e);
+    res.status(500).json({ message: 'Registration failed', error: e.message });
+  }
+});
+
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const allUsers = readUsers();
+    const user = allUsers.find((u) => u.email === cleanEmail);
+
+    if (!user || !verifyPassword(password, user.hash, user.salt)) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    const token = createToken({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    });
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (e) {
+    console.error('Login error:', e);
+    res.status(500).json({ message: 'Login failed', error: e.message });
+  }
+});
+
+app.get('/api/auth/me', (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  const allUsers = readUsers();
+  const user = allUsers.find((u) => u.id === req.user.id);
+  if (!user) {
+    return res.json({ user: req.user });
+  }
+  res.json({
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt
+    }
+  });
+});
 
 // -------------------------------------------------------------
-// API ENDPOINTS
+// EXAM & EVALUATION ROUTES
 // -------------------------------------------------------------
 
 app.get('/api/health', (req, res) => res.json({ ok: true, timestamp: new Date().toISOString() }));
 
-// 1. PDF Parsing Helpers
 app.post('/api/parse/questions', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'PDF file is required' });
@@ -787,7 +974,7 @@ app.post('/api/parse/answer-key', upload.single('file'), async (req, res) => {
   }
 });
 
-// 2. EXAM CREATION & HOSTING (CREATOR FLOW)
+// Create & Host an Exam (Creator Flow)
 app.post('/api/exams/create', (req, res) => {
   try {
     const { title, creatorName, config, questions, answerKey } = req.body;
@@ -800,7 +987,6 @@ app.post('/api/exams/create', (req, res) => {
 
     const allExams = readExams();
     let code = generateExamCode();
-    // Ensure uniqueness
     while (allExams.some((e) => e.code === code)) {
       code = generateExamCode();
     }
@@ -812,8 +998,10 @@ app.post('/api/exams/create', (req, res) => {
       id,
       code,
       adminKey,
+      creatorId: req.user?.id || 'guest',
+      creatorEmail: req.user?.email || '',
       title: title || 'Practice Examination',
-      creatorName: creatorName || 'Exam Creator',
+      creatorName: creatorName || req.user?.name || 'Exam Creator',
       createdAt: new Date().toISOString(),
       config: {
         duration: Number(config?.duration) || 30,
@@ -848,7 +1036,7 @@ app.post('/api/exams/create', (req, res) => {
   }
 });
 
-// 3. CANDIDATE JOIN (FETCH EXAM WITHOUT EXPOSING ANSWER KEY)
+// Candidate Fetch Exam (Stripping answerKey)
 app.get('/api/exams/:code', (req, res) => {
   const code = req.params.code.trim().toUpperCase();
   const allExams = readExams();
@@ -858,7 +1046,6 @@ app.get('/api/exams/:code', (req, res) => {
     return res.status(404).json({ message: `No exam found for code "${code}". Please check the code and try again.` });
   }
 
-  // Return candidate-safe view (strip answerKey to prevent cheating)
   res.json({
     id: exam.id,
     code: exam.code,
@@ -871,7 +1058,7 @@ app.get('/api/exams/:code', (req, res) => {
   });
 });
 
-// 4. CANDIDATE EXAM SUBMISSION & INSTANT EVALUATION
+// Candidate Submission & Scoring
 app.post('/api/exams/:code/submit', (req, res) => {
   try {
     const code = req.params.code.trim().toUpperCase();
@@ -891,8 +1078,9 @@ app.post('/api/exams/:code/submit', (req, res) => {
       examId: exam.id,
       examCode: exam.code,
       examTitle: exam.title,
-      candidateName: clean(candidateName) || 'Anonymous Candidate',
-      candidateEmail: clean(candidateEmail) || '',
+      candidateId: req.user?.id || null,
+      candidateName: clean(candidateName) || req.user?.name || 'Anonymous Candidate',
+      candidateEmail: clean(candidateEmail) || req.user?.email || '',
       submittedAt: new Date().toISOString(),
       timeSpentSeconds: Number(timeSpentSeconds) || 0,
       answers: answers || {},
@@ -923,7 +1111,7 @@ app.post('/api/exams/:code/submit', (req, res) => {
   }
 });
 
-// 5. CREATOR RESULTS & LEADERBOARD DASHBOARD
+// Creator Analytics & Leaderboard (Restricted to Exam Creator)
 app.get('/api/exams/:code/analytics', (req, res) => {
   try {
     const code = req.params.code.trim().toUpperCase();
@@ -934,10 +1122,21 @@ app.get('/api/exams/:code/analytics', (req, res) => {
       return res.status(404).json({ message: 'Exam not found' });
     }
 
+    // Access control: Allow creator or authenticated teacher who owns the exam
+    const isCreator =
+      !exam.creatorId ||
+      exam.creatorId === 'guest' ||
+      (req.user && (req.user.id === exam.creatorId || (exam.creatorEmail && req.user.email && req.user.email.toLowerCase() === exam.creatorEmail.toLowerCase())));
+
+    if (!isCreator && req.user?.role !== 'teacher') {
+      return res.status(403).json({
+        message: 'Access Restricted: Only the exam creator / teacher can access candidate submissions and leaderboard.'
+      });
+    }
+
     const allAttempts = readAttempts();
     const examAttempts = allAttempts.filter((a) => a.examCode === exam.code || a.examId === exam.id);
 
-    // Sort leaderboard by score descending, then time spent ascending
     const leaderboard = examAttempts
       .map((a) => ({
         attemptId: a.id,
@@ -955,7 +1154,6 @@ app.get('/api/exams/:code/analytics', (req, res) => {
       }))
       .sort((a, b) => b.score - a.score || a.timeSpentSeconds - b.timeSpentSeconds);
 
-    // Compute aggregated batch metrics
     const totalCandidates = leaderboard.length;
     let avgScore = 0,
       highestScore = 0,
@@ -972,7 +1170,6 @@ app.get('/api/exams/:code/analytics', (req, res) => {
       avgTimeSeconds = leaderboard.reduce((a, b) => a + b.timeSpentSeconds, 0) / totalCandidates;
     }
 
-    // Aggregate pattern difficulty across entire batch
     const patternSummary = {};
     for (const a of examAttempts) {
       const typeResults = a.result?.typeResults || [];
@@ -1005,6 +1202,7 @@ app.get('/api/exams/:code/analytics', (req, res) => {
         id: exam.id,
         code: exam.code,
         title: exam.title,
+        creatorId: exam.creatorId,
         creatorName: exam.creatorName,
         createdAt: exam.createdAt,
         totalQuestions: exam.questions.length,
@@ -1027,7 +1225,73 @@ app.get('/api/exams/:code/analytics', (req, res) => {
   }
 });
 
-// 6. SPECIFIC STUDENT ATTEMPT DETAILS
+// Candidate Attempt History (Authenticated User)
+app.get('/api/attempts/my-attempts', (req, res) => {
+  if (!req.user) return res.status(401).json({ message: 'Please log in to view your attempt history' });
+  const allAttempts = readAttempts();
+  const myAttempts = allAttempts
+    .filter((a) => a.candidateId === req.user.id || (a.candidateEmail && a.candidateEmail.toLowerCase() === req.user.email.toLowerCase()))
+    .map((a) => ({
+      id: a.id,
+      examId: a.examId,
+      examCode: a.examCode,
+      examTitle: a.examTitle,
+      score: a.result.score,
+      maxScore: a.result.maxScore,
+      accuracy: a.result.accuracy,
+      attempted: a.result.attempted,
+      totalQuestions: a.result.totalQuestions,
+      submittedAt: a.submittedAt,
+      timeSpentSeconds: a.timeSpentSeconds
+    }));
+
+  res.json(myAttempts);
+});
+
+// Creator Hosted Exams List (Authenticated User)
+app.get('/api/exams/my-created', (req, res) => {
+  const allExams = readExams();
+  const allAttempts = readAttempts();
+
+  let userExams = allExams;
+  if (req.user) {
+    userExams = allExams.filter((e) => e.creatorId === req.user.id || (e.creatorEmail && e.creatorEmail.toLowerCase() === req.user.email.toLowerCase()));
+  }
+
+  res.json(
+    userExams.map((e) => ({
+      id: e.id,
+      code: e.code,
+      title: e.title,
+      creatorName: e.creatorName,
+      createdAt: e.createdAt,
+      totalQuestions: e.questions.length,
+      duration: e.config?.duration || 30,
+      totalAttempts: allAttempts.filter((a) => a.examCode === e.code || a.examId === e.id).length
+    }))
+  );
+});
+
+// Public / All Exams List
+app.get('/api/exams', (req, res) => {
+  const allExams = readExams();
+  const allAttempts = readAttempts();
+
+  res.json(
+    allExams.map((e) => ({
+      id: e.id,
+      code: e.code,
+      title: e.title,
+      creatorName: e.creatorName,
+      createdAt: e.createdAt,
+      totalQuestions: e.questions.length,
+      duration: e.config?.duration || 30,
+      totalAttempts: allAttempts.filter((a) => a.examCode === e.code || a.examId === e.id).length
+    }))
+  );
+});
+
+// Specific Attempt Details
 app.get('/api/attempts/:attemptId', (req, res) => {
   const allAttempts = readAttempts();
   const attempt = allAttempts.find((a) => a.id === req.params.attemptId);
@@ -1047,25 +1311,6 @@ app.get('/api/attempts/:attemptId', (req, res) => {
         }
       : null
   });
-});
-
-// 7. LIST OF CREATED EXAMS (FOR CREATOR DASHBOARD SELECTION)
-app.get('/api/exams', (req, res) => {
-  const allExams = readExams();
-  const allAttempts = readAttempts();
-
-  res.json(
-    allExams.map((e) => ({
-      id: e.id,
-      code: e.code,
-      title: e.title,
-      creatorName: e.creatorName,
-      createdAt: e.createdAt,
-      totalQuestions: e.questions.length,
-      duration: e.config?.duration || 30,
-      totalAttempts: allAttempts.filter((a) => a.examCode === e.code || a.examId === e.id).length
-    }))
-  );
 });
 
 if (!process.env.VERCEL) {

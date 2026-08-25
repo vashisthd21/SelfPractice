@@ -21,7 +21,21 @@ export function CandidateJoinModal({ initialCode, onStartExam, onCancel }) {
   const [error, setError] = useState('');
 
   const API = import.meta.env.VITE_API_URL || '/api';
-  const api = axios.create({ baseURL: API });
+  const token = localStorage.getItem('examlens_token') || '';
+  const api = axios.create({
+    baseURL: API,
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+
+  useEffect(() => {
+    try {
+      const savedUser = JSON.parse(localStorage.getItem('examlens_user') || 'null');
+      if (savedUser) {
+        if (savedUser.name) setName(savedUser.name);
+        if (savedUser.email) setEmail(savedUser.email);
+      }
+    } catch (e) {}
+  }, []);
 
   const fetchExamDetails = async (examCode) => {
     if (!examCode || examCode.trim().length < 4) return;

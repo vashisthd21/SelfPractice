@@ -17,7 +17,8 @@ import {
   X,
   Target,
   BarChart3,
-  Award
+  Award,
+  Lock
 } from 'lucide-react';
 import { PatternBadge, TYPE_CONFIG } from './PatternRenderers';
 import { TypeAnalyticsCard } from './TypeAnalyticsCard';
@@ -42,34 +43,63 @@ export function CreatorDashboard({ examCode, onBack, onSelectExam }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const API = import.meta.env.VITE_API_URL || '/api';
-  const api = axios.create({ baseURL: API });
+  const token = localStorage.getItem('examlens_token') || '';
+  const api = axios.create({
+    baseURL: API,
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
 
-  const loadAnalytics = async (code) => {
-    if (!code) return;
-    setLoading(true);
+  const loadAnalytics = async (code, silent = false) => {
+    if (!code) {
+      setLoading(false);
+      return;
+    }
+    if (!silent) setLoading(true);
     setError('');
     try {
       const res = await api.get(`/exams/${code}/analytics`);
       setData(res.data);
     } catch (e) {
-      setError(e.response?.data?.message || 'Could not fetch exam analytics');
+      if (!silent) setError(e.response?.data?.message || 'Could not fetch exam analytics');
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
+
+  const loadAllExams = async () => {
+    setLoading(true);
+    try {
+      let list = [];
+      try {
+        const res = await api.get('/exams/my-created');
+        list = res.data || [];
+      } catch (err) {
+        const fallback = await api.get('/exams');
+        list = fallback.data || [];
+      }
+      setAllExams(list);
+      if (!examCode && list.length > 0) {
+        onSelectExam && onSelectExam(list[0].code);
+        await loadAnalytics(list[0].code);
+      }
+    } catch (e) {
+      setError('No exams found.');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadAllExams = async () => {
-    try {
-      const res = await api.get('/exams');
-      setAllExams(res.data || []);
-    } catch (e) {}
-  };
-
   useEffect(() => {
     if (examCode) {
       loadAnalytics(examCode);
+      const interval = setInterval(() => {
+        loadAnalytics(examCode, true);
+      }, 8000);
+      loadAllExams();
+      return () => clearInterval(interval);
+    } else {
+      loadAllExams();
     }
-    loadAllExams();
   }, [examCode]);
 
   const handleCopyLink = () => {
@@ -116,13 +146,19 @@ export function CreatorDashboard({ examCode, onBack, onSelectExam }) {
   }
 
   if (error || !data) {
+    const isForbidden = error && (error.toLowerCase().includes('restricted') || error.toLowerCase().includes('access'));
     return (
       <main className="content">
-        <div className="panel upload-panel center">
-          <h2>Exam Dashboard</h2>
-          <div className="error">{error || 'No exam selected'}</div>
-          {allExams.length > 0 && (
-            <div className="created-exams-picker">
+        <div className="panel upload-panel center" style={{ textAlign: 'center', padding: '36px 20px' }}>
+          <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
+            <Lock size={26} />
+          </div>
+          <h2>{isForbidden ? 'Creator Dashboard Protected' : 'Exam Dashboard'}</h2>
+          <p style={{ color: '#64748b', maxWidth: 480, margin: '8px auto 20px', fontSize: '14.5px', lineHeight: 1.5 }}>
+            {error || 'This dashboard is reserved for the Exam Creator / Teacher. Candidates cannot access other students’ submissions.'}
+          </p>
+          {allExams.length > 0 && !isForbidden && (
+            <div className="created-exams-picker" style={{ maxWidth: 480, margin: '0 auto 20px' }}>
               <h3>Select a Hosted Exam:</h3>
               <div className="exam-cards-list">
                 {allExams.map((e) => (
@@ -145,8 +181,8 @@ export function CreatorDashboard({ examCode, onBack, onSelectExam }) {
               </div>
             </div>
           )}
-          <button className="secondary" onClick={onBack} style={{ marginTop: 20 }}>
-            <ArrowLeft size={16} /> Back to Home
+          <button className="primary" onClick={onBack} style={{ marginTop: 10 }}>
+            <ArrowLeft size={16} /> Back to Practice Home
           </button>
         </div>
       </main>
@@ -165,6 +201,22 @@ export function CreatorDashboard({ examCode, onBack, onSelectExam }) {
           <div className="creator-badge-row">
             <span className="eyebrow">CREATOR & TEACHER DASHBOARD</span>
             <span className="live-pulse-badge">● Live Submissions Active</span>
+            {allExams.length > 1 && (
+              <select
+                className="exam-switcher-select"
+                value={exam.code}
+                onChange={(e) => {
+                  onSelectExam && onSelectExam(e.target.value);
+                  loadAnalytics(e.target.value);
+                }}
+              >
+                {allExams.map((x) => (
+                  <option key={x.code} value={x.code}>
+                    Switch Exam: {x.title} ({x.code})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <h2>{exam.title}</h2>
           <p>

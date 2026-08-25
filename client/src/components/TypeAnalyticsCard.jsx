@@ -4,24 +4,26 @@ import { PatternBadge, TYPE_CONFIG } from './PatternRenderers';
 import { TrendingUp, AlertTriangle, CheckCircle2, Award } from 'lucide-react';
 
 export function TypeAnalyticsCard({ typeResults = [] }) {
-  if (!typeResults || typeResults.length === 0) return null;
+  // Only display question types that actually exist in this exam (total > 0)
+  const activeTypes = (typeResults || []).filter((t) => (t.total || 0) > 0);
+  if (!activeTypes.length) return null;
 
   // Identify strengths and improvement areas
-  const sorted = [...typeResults].sort((a, b) => b.accuracy - a.accuracy);
-  const strongest = sorted.find((s) => s.accuracy >= 70 && s.total >= 1);
-  const weakest = [...sorted].reverse().find((s) => s.accuracy < 70 && s.total >= 1);
+  const sorted = [...activeTypes].sort((a, b) => b.accuracy - a.accuracy);
+  const strongest = sorted.find((s) => s.accuracy >= 60 && s.attempted >= 1);
+  const weakest = [...sorted].reverse().find((s) => s.accuracy < 60 && s.attempted >= 1);
 
   return (
     <div className="type-analytics-container panel">
       <div className="type-analytics-header">
         <div>
-          <h3>Question-Type Performance Matrix</h3>
-          <p>Pattern-wise breakdown of your accuracy and speed across question categories.</p>
+          <h3>Question-Pattern Breakdown</h3>
+          <p>Accuracy and average solving speed across question categories.</p>
         </div>
         <div className="insights-pills">
           {strongest && (
             <div className="insight-pill strong">
-              <Award size={15} />
+              <Award size={14} />
               <span>
                 Strongest: <b>{strongest.label}</b> ({strongest.accuracy.toFixed(0)}%)
               </span>
@@ -29,9 +31,9 @@ export function TypeAnalyticsCard({ typeResults = [] }) {
           )}
           {weakest && (
             <div className="insight-pill weak">
-              <AlertTriangle size={15} />
+              <AlertTriangle size={14} />
               <span>
-                Focus Area: <b>{weakest.label}</b> ({weakest.accuracy.toFixed(0)}%)
+                Needs Focus: <b>{weakest.label}</b> ({weakest.accuracy.toFixed(0)}%)
               </span>
             </div>
           )}
@@ -40,22 +42,22 @@ export function TypeAnalyticsCard({ typeResults = [] }) {
 
       {/* Bar Chart for Type Accuracy */}
       <div className="type-chart-wrapper">
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={typeResults} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+        <ResponsiveContainer width="100%" height={190}>
+          <BarChart data={activeTypes} margin={{ top: 10, right: 10, left: -25, bottom: 25 }}>
             <XAxis
               dataKey="label"
               tick={{ fontSize: 11, fill: '#64748b' }}
               interval={0}
-              angle={-20}
+              angle={-15}
               textAnchor="end"
             />
-            <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} unit="%" />
+            <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#64748b' }} unit="%" />
             <Tooltip
               formatter={(val) => [`${Number(val).toFixed(1)}%`, 'Accuracy']}
-              contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+              contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
             />
-            <Bar dataKey="accuracy" radius={[6, 6, 0, 0]}>
-              {typeResults.map((entry, index) => {
+            <Bar dataKey="accuracy" radius={[5, 5, 0, 0]} maxBarSize={45}>
+              {activeTypes.map((entry, index) => {
                 const conf = TYPE_CONFIG[entry.type] || TYPE_CONFIG.general_mcq;
                 return <Cell key={`cell-${index}`} fill={conf.color || '#6366f1'} />;
               })}
@@ -66,7 +68,7 @@ export function TypeAnalyticsCard({ typeResults = [] }) {
 
       {/* Detailed Type Cards Grid */}
       <div className="type-breakdown-grid">
-        {typeResults.map((t) => {
+        {activeTypes.map((t) => {
           const conf = TYPE_CONFIG[t.type] || TYPE_CONFIG.general_mcq;
           const avgSec = Math.round(t.averageTime || 0);
           return (

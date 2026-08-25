@@ -2,18 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import axios from 'axios';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
-} from 'recharts';
-import {
   Upload,
   FileText,
   Clock3,
@@ -23,16 +11,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Flag,
-  Trash2,
-  Eye,
-  History,
   Play,
   RotateCcw,
   Edit3,
-  Filter,
-  Layers,
   Sparkles,
-  BookOpen,
   LayoutGrid,
   X,
   KeyRound,
@@ -44,7 +26,14 @@ import {
   ExternalLink,
   Users,
   ShieldCheck,
-  CheckCircle
+  CheckCircle,
+  LogIn,
+  LogOut,
+  UserCheck,
+  History,
+  GraduationCap,
+  PlusCircle,
+  ArrowRight
 } from 'lucide-react';
 import {
   PatternRenderer,
@@ -55,10 +44,10 @@ import { ScratchPadModal } from './components/ScratchPadModal';
 import { TypeAnalyticsCard } from './components/TypeAnalyticsCard';
 import { CreatorDashboard } from './components/CreatorDashboard';
 import { CandidateJoinModal } from './components/CandidateJoinModal';
+import { AuthModal } from './components/AuthModal';
 import './styles.css';
 
 const API = import.meta.env.VITE_API_URL || '/api';
-const api = axios.create({ baseURL: API });
 
 const fmt = (s) => {
   s = Math.max(0, Math.round(s));
@@ -67,26 +56,49 @@ const fmt = (s) => {
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 };
 
+const fmtTime = (s) => {
+  s = Math.max(0, Math.round(s));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}m ${sec}s`;
+};
+
 function App() {
-  // Navigation states: 'home', 'create-upload', 'create-preview', 'publish-success', 'exam', 'result', 'creator-dashboard', 'history'
+  // Navigation states: 'home', 'create-upload', 'create-preview', 'publish-success', 'exam', 'result', 'creator-dashboard', 'my-attempts'
   const [screen, setScreen] = useState('home');
   const [initialCodeParam, setInitialCodeParam] = useState('');
+
+  // Authentication state
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('examlens_user') || 'null');
+    } catch (e) {
+      return null;
+    }
+  });
+  const [token, setToken] = useState(() => localStorage.getItem('examlens_token') || '');
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+
+  // Authenticated User Lists
+  const [myCreatedExams, setMyCreatedExams] = useState([]);
+  const [myAttempts, setMyAttempts] = useState([]);
+  const [listLoading, setListLoading] = useState(false);
 
   // Creator flow states
   const [creatorExam, setCreatorExam] = useState(null);
   const [creatorAnswerKey, setCreatorAnswerKey] = useState(null);
-  const [creatorKeyIssues, setCreatorKeyIssues] = useState(null);
   const [publishedExam, setPublishedExam] = useState(null);
   const [creatorExamTitle, setCreatorExamTitle] = useState('');
-  const [creatorName, setCreatorName] = useState('');
+  const [creatorName, setCreatorName] = useState(currentUser?.name || '');
   const [duration, setDuration] = useState(30);
   const [pos, setPos] = useState(1);
   const [neg, setNeg] = useState(0.25);
 
   // Candidate exam states
   const [candidateExam, setCandidateExam] = useState(null);
-  const [candidateName, setCandidateName] = useState('');
-  const [candidateEmail, setCandidateEmail] = useState('');
+  const [candidateName, setCandidateName] = useState(currentUser?.name || '');
+  const [candidateEmail, setCandidateEmail] = useState(currentUser?.email || '');
   const [answers, setAnswers] = useState({});
   const [idx, setIdx] = useState(0);
   const [seconds, setSeconds] = useState(0);
@@ -101,7 +113,15 @@ function App() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
-  // Check URL parameters on mount (?code=8K2P9Q or ?results=8K2P9Q)
+  // Axios instance with bearer token
+  const authApi = useMemo(() => {
+    return axios.create({
+      baseURL: API,
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+  }, [token]);
+
+  // Load URL parameters on mount (?code=8K2P9Q or ?results=8K2P9Q)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
@@ -115,6 +135,29 @@ function App() {
       setScreen('home');
     }
   }, []);
+
+  // Fetch user exams & attempt history when logged in
+  const loadUserAccountData = async () => {
+    if (!token) return;
+    setListLoading(true);
+    try {
+      const [resExams, resAttempts] = await Promise.allSettled([
+        authApi.get('/exams/my-created'),
+        authApi.get('/attempts/my-attempts')
+      ]);
+      if (resExams.status === 'fulfilled') setMyCreatedExams(resExams.value.data || []);
+      if (resAttempts.status === 'fulfilled') setMyAttempts(resAttempts.value.data || []);
+    } catch (e) {
+    } finally {
+      setListLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      loadUserAccountData();
+    }
+  }, [token]);
 
   // Exam Countdown Timer
   useEffect(() => {
@@ -133,6 +176,24 @@ function App() {
     }
   }, [seconds]);
 
+  const handleAuthSuccess = (u, t) => {
+    setCurrentUser(u);
+    setToken(t);
+    setCreatorName(u.name || '');
+    setCandidateName(u.name || '');
+    setCandidateEmail(u.email || '');
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem('examlens_token');
+    localStorage.removeItem('examlens_user');
+    setCurrentUser(null);
+    setToken('');
+    setMyCreatedExams([]);
+    setMyAttempts([]);
+    setScreen('home');
+  };
+
   // -------------------------------------------------------------
   // CREATOR ACTIONS
   // -------------------------------------------------------------
@@ -143,7 +204,7 @@ function App() {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const r = await api.post('/parse/questions', fd);
+      const r = await authApi.post('/parse/questions', fd);
       if (!r.data.questions?.length) throw new Error('No questions were detected in this PDF.');
       setCreatorExam({
         title: file.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' '),
@@ -164,25 +225,9 @@ function App() {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const r = await api.post('/parse/answer-key', fd);
+      const r = await authApi.post('/parse/answer-key', fd);
       const parsed = r.data.answers || {};
-
-      const missing = (creatorExam?.questions || [])
-        .map((q) => q.questionNumber)
-        .filter((n) => parsed[n] === undefined);
-
-      const invalid = (creatorExam?.questions || [])
-        .map((q) => ({
-          questionNumber: q.questionNumber,
-          answer: parsed[q.questionNumber],
-          options: Object.keys(q.options || {})
-        }))
-        .filter((x) => x.answer !== undefined && !x.options.includes(x.answer));
-
       setCreatorAnswerKey(parsed);
-      if (missing.length || invalid.length) {
-        setCreatorKeyIssues({ missing, invalid });
-      }
     } catch (e) {
       setError(e.response?.data?.message || e.message);
     } finally {
@@ -205,7 +250,7 @@ function App() {
     try {
       const payload = {
         title: creatorExamTitle || creatorExam.title || 'Practice Examination',
-        creatorName: creatorName || 'Exam Creator',
+        creatorName: creatorName || currentUser?.name || 'Exam Creator',
         config: {
           duration,
           positiveMarks: pos,
@@ -215,8 +260,9 @@ function App() {
         answerKey: creatorAnswerKey
       };
 
-      const res = await api.post('/exams/create', payload);
+      const res = await authApi.post('/exams/create', payload);
       setPublishedExam(res.data.exam);
+      loadUserAccountData();
       setScreen('publish-success');
     } catch (e) {
       setError(e.response?.data?.message || e.message);
@@ -231,8 +277,8 @@ function App() {
 
   function handleStartCandidateExam({ exam, candidateName: cName, candidateEmail: cEmail }) {
     setCandidateExam(exam);
-    setCandidateName(cName);
-    setCandidateEmail(cEmail);
+    setCandidateName(cName || currentUser?.name || 'Candidate');
+    setCandidateEmail(cEmail || currentUser?.email || '');
     setAnswers({});
     setIdx(0);
     setSeconds((exam.config?.duration || 30) * 60);
@@ -285,14 +331,15 @@ function App() {
     setError('');
     try {
       const payload = {
-        candidateName: candidateName || 'Anonymous Candidate',
-        candidateEmail: candidateEmail || '',
+        candidateName: candidateName || currentUser?.name || 'Anonymous Candidate',
+        candidateEmail: candidateEmail || currentUser?.email || '',
         answers,
         timeSpentSeconds: timeSpentTotal
       };
 
-      const res = await api.post(`/exams/${candidateExam.code}/submit`, payload);
+      const res = await authApi.post(`/exams/${candidateExam.code}/submit`, payload);
       setCandidateResult(res.data.result);
+      loadUserAccountData();
       setScreen('result');
     } catch (e) {
       setError(e.response?.data?.message || e.message);
@@ -317,16 +364,17 @@ function App() {
 
   return (
     <div className="app">
-      {/* Universal Header */}
+      {/* Universal Header with Authentication Status */}
       {screen !== 'exam' && (
         <header>
           <div className="brand" onClick={() => setScreen('home')}>
             <span className="brandmark">E</span>
             <div>
               <b>ExamLens</b>
-              <small>Multi-User Exam Hosting · Pattern Analytics</small>
+              <small>Multi-User Exam Platform</small>
             </div>
           </div>
+
           <div className="header-nav-actions">
             <button
               type="button"
@@ -338,20 +386,73 @@ function App() {
             <button
               type="button"
               className={screen === 'create-upload' ? 'ghost active-tab' : 'ghost'}
-              onClick={() => setScreen('create-upload')}
+              onClick={() => {
+                if (!currentUser) {
+                  setAuthMode('signup');
+                  setAuthModalOpen(true);
+                } else {
+                  setScreen('create-upload');
+                }
+              }}
             >
               + Create Exam
             </button>
-            <button
-              type="button"
-              className={screen === 'creator-dashboard' ? 'ghost active-tab' : 'ghost'}
-              onClick={() => {
-                setActiveDashboardCode(publishedExam?.code || '');
-                setScreen('creator-dashboard');
-              }}
-            >
-              Results & Leaderboards
-            </button>
+
+            {/* ONLY show Creator Dashboard to Authenticated Teachers/Creators */}
+            {currentUser?.role === 'teacher' && (
+              <button
+                type="button"
+                className={screen === 'creator-dashboard' ? 'ghost active-tab' : 'ghost'}
+                onClick={() => {
+                  setActiveDashboardCode(myCreatedExams[0]?.code || publishedExam?.code || '');
+                  setScreen('creator-dashboard');
+                }}
+              >
+                Creator Dashboard
+              </button>
+            )}
+
+            {currentUser ? (
+              <div className="user-profile-header-group">
+                <div className="user-pill-badge">
+                  <span className="user-avatar-circle">
+                    {currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}
+                  </span>
+                  <div className="user-info-text">
+                    <b>{currentUser.name}</b>
+                    <small>{currentUser.role === 'teacher' ? 'Teacher' : 'Student'}</small>
+                  </div>
+                </div>
+                <button type="button" className="ghost signout-btn" onClick={handleSignOut} title="Sign Out">
+                  <LogOut size={15} />
+                  <span>Logout</span>
+                </button>
+              </div>
+            ) : (
+              <div className="auth-header-buttons">
+                <button
+                  type="button"
+                  className="ghost signin-trigger-btn"
+                  onClick={() => {
+                    setAuthMode('login');
+                    setAuthModalOpen(true);
+                  }}
+                >
+                  <LogIn size={15} />
+                  <span>Sign In</span>
+                </button>
+                <button
+                  type="button"
+                  className="primary signup-trigger-btn"
+                  onClick={() => {
+                    setAuthMode('signup');
+                    setAuthModalOpen(true);
+                  }}
+                >
+                  Create Account
+                </button>
+              </div>
+            )}
           </div>
         </header>
       )}
@@ -365,19 +466,29 @@ function App() {
               Create, share, and solve exams with <em>interactive pattern AI.</em>
             </h1>
             <p>
-              Upload your Question Paper & Answer Key PDFs. Generate a shareable 6-digit code or direct link.
-              Candidates solve with specialized tools, while creators track submissions live on the leaderboard.
+              Upload Question Paper & Answer Key PDFs. Generate a shareable 6-digit code.
+              Candidates solve with specialized tools, while creators monitor live results and rankings.
             </p>
 
             <div className="home-action-buttons">
-              <button className="primary host-btn" onClick={() => setScreen('create-upload')}>
+              <button
+                className="primary host-btn"
+                onClick={() => {
+                  if (!currentUser) {
+                    setAuthMode('signup');
+                    setAuthModalOpen(true);
+                  } else {
+                    setScreen('create-upload');
+                  }
+                }}
+              >
                 <Upload size={18} />
                 <span>Create & Host an Exam</span>
               </button>
               <button
                 className="secondary"
                 onClick={() => {
-                  setActiveDashboardCode(publishedExam?.code || '');
+                  setActiveDashboardCode(myCreatedExams[0]?.code || publishedExam?.code || '');
                   setScreen('creator-dashboard');
                 }}
               >
@@ -385,6 +496,60 @@ function App() {
                 <span>View Results & Leaderboard</span>
               </button>
             </div>
+
+            {/* Authenticated User Quick Links */}
+            {currentUser && (
+              <div className="user-dashboard-summary-cards">
+                {myCreatedExams.length > 0 && (
+                  <div className="user-dash-box">
+                    <div className="dash-box-head">
+                      <ShieldCheck size={16} className="blue-icon" />
+                      <b>My Hosted Exams ({myCreatedExams.length})</b>
+                    </div>
+                    <div className="quick-exams-list">
+                      {myCreatedExams.slice(0, 3).map((e) => (
+                        <div key={e.code} className="quick-exam-item">
+                          <div>
+                            <b>{e.title}</b>
+                            <small>Code: <code>{e.code}</code> · {e.totalAttempts} submissions</small>
+                          </div>
+                          <button
+                            type="button"
+                            className="secondary btn-xs"
+                            onClick={() => {
+                              setActiveDashboardCode(e.code);
+                              setScreen('creator-dashboard');
+                            }}
+                          >
+                            Leaderboard →
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {myAttempts.length > 0 && (
+                  <div className="user-dash-box">
+                    <div className="dash-box-head">
+                      <GraduationCap size={16} className="green-icon" />
+                      <b>My Exam History ({myAttempts.length})</b>
+                    </div>
+                    <div className="quick-exams-list">
+                      {myAttempts.slice(0, 3).map((a) => (
+                        <div key={a.id} className="quick-exam-item">
+                          <div>
+                            <b>{a.examTitle}</b>
+                            <small>Score: <b>{Number(a.score).toFixed(2)}</b>/{a.maxScore} · {a.accuracy.toFixed(0)}% Acc</small>
+                          </div>
+                          <span className="attempt-date-tag">{new Date(a.submittedAt).toLocaleDateString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="features-pill-row">
               <span className="feat-pill">⚡ Auto Pattern AI</span>
@@ -415,7 +580,6 @@ function App() {
           </div>
 
           <div className="create-grid-layout">
-            {/* Question PDF Upload */}
             <div className="panel upload-sub-card">
               <div className="card-top-icon">
                 <FileText size={24} className="blue-icon" />
@@ -435,7 +599,6 @@ function App() {
               </label>
             </div>
 
-            {/* Answer Key PDF Upload */}
             <div className="panel upload-sub-card">
               <div className="card-top-icon">
                 <ShieldCheck size={24} className="green-icon" />
@@ -456,7 +619,6 @@ function App() {
             </div>
           </div>
 
-          {/* Exam Configuration Form */}
           <div className="panel exam-config-panel">
             <h3>Exam Settings & Rules</h3>
             <div className="config-grid-full">
@@ -572,7 +734,7 @@ function App() {
             </div>
             <span className="eyebrow">EXAM PUBLISHED SUCCESSFULLY</span>
             <h2>{publishedExam.title}</h2>
-            <p>Your exam is now live! Share this unique code or direct link with students to attempt.</p>
+            <p>Your exam is live! Share this unique code or direct link with students to attempt.</p>
 
             <div className="code-highlight-card">
               <span className="code-sub-label">UNIQUE EXAM CODE</span>
@@ -622,8 +784,8 @@ function App() {
                 onClick={() => {
                   handleStartCandidateExam({
                     exam: publishedExam,
-                    candidateName: 'Test Candidate',
-                    candidateEmail: ''
+                    candidateName: currentUser?.name || 'Test Candidate',
+                    candidateEmail: currentUser?.email || ''
                   });
                 }}
               >
@@ -676,7 +838,6 @@ function App() {
 
           <TypeAnalyticsCard typeResults={candidateResult.typeResults || []} />
 
-          {/* Question-by-Question Review */}
           <div className="panel review" style={{ marginTop: 20 }}>
             <div className="review-head">
               <div>
@@ -714,18 +875,20 @@ function App() {
           </div>
 
           <div className="actions bottom">
-            <button
-              className="secondary"
-              onClick={() => {
-                setActiveDashboardCode(candidateExam.code);
-                setScreen('creator-dashboard');
-              }}
-            >
-              <Trophy size={17} />
-              View Batch Leaderboard
-            </button>
+            {currentUser?.role === 'teacher' && (
+              <button
+                className="secondary"
+                onClick={() => {
+                  setActiveDashboardCode(candidateExam.code);
+                  setScreen('creator-dashboard');
+                }}
+              >
+                <Trophy size={17} />
+                Creator Dashboard
+              </button>
+            )}
             <button className="primary" onClick={() => setScreen('home')}>
-              Take Another Exam
+              Back to Home
             </button>
           </div>
         </main>
@@ -741,6 +904,13 @@ function App() {
       )}
 
       <ScratchPadModal isOpen={scratchpadOpen} onClose={() => setScratchpadOpen(false)} />
+
+      <AuthModal
+        isOpen={authModalOpen}
+        initialMode={authMode}
+        onClose={() => setAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+      />
     </div>
   );
 }
