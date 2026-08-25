@@ -90,16 +90,16 @@ const AttemptSchema = new mongoose.Schema({
   result: { type: Object, default: {} }
 }, { timestamps: true });
 
-let User = null;
-let Exam = null;
-let Attempt = null;
+const User = mongoose.models.User || mongoose.model('User', UserSchema);
+const Exam = mongoose.models.Exam || mongoose.model('Exam', ExamSchema);
+const Attempt = mongoose.models.Attempt || mongoose.model('Attempt', AttemptSchema);
 
 let isMongoConnected = false;
+let cachedPromise = global._mongoosePromise || null;
 
 export async function connectDB() {
   const uri = getMongoUri();
   if (!uri) {
-    console.log('ℹ️  No MONGODB_URI configured. Running with local filesystem storage.');
     return false;
   }
 
@@ -107,21 +107,30 @@ export async function connectDB() {
     return true;
   }
 
-  try {
+  if (!cachedPromise) {
     mongoose.set('strictQuery', false);
-    await mongoose.connect(uri, {
+    cachedPromise = mongoose.connect(uri, {
       dbName: process.env.MONGODB_DB || 'examlens',
-      serverSelectionTimeoutMS: 6000
+      serverSelectionTimeoutMS: 8000
+    }).then((m) => {
+      isMongoConnected = true;
+      console.log('✅ Connected to MongoDB Atlas successfully.');
+      return m;
+    }).catch((err) => {
+      cachedPromise = null;
+      global._mongoosePromise = null;
+      isMongoConnected = false;
+      console.warn('⚠️  MongoDB connection error:', err.message);
+      return null;
     });
-    isMongoConnected = true;
-    console.log('✅ Connected to MongoDB Atlas successfully.');
+    global._mongoosePromise = cachedPromise;
+  }
 
-    User = mongoose.models.User || mongoose.model('User', UserSchema);
-    Exam = mongoose.models.Exam || mongoose.model('Exam', ExamSchema);
-    Attempt = mongoose.models.Attempt || mongoose.model('Attempt', AttemptSchema);
-    return true;
-  } catch (err) {
-    console.warn('⚠️  MongoDB connection failed:', err.message, '- Falling back to file storage.');
+  try {
+    const conn = await cachedPromise;
+    isMongoConnected = Boolean(conn && mongoose.connection.readyState === 1);
+    return isMongoConnected;
+  } catch (e) {
     isMongoConnected = false;
     return false;
   }
@@ -203,11 +212,19 @@ export async function findExamByCode(code) {
   await connectDB();
   if (isMongoConnected && Exam) {
     try {
-      return await Exam.findOne({ $or: [{ code: cleanCode }, { id: code }] }).lean();
+      const doc = await Exam.findOne({
+        $or: [
+          { code: cleanCode },
+          { code: new RegExp(`^${cleanCode}$`, 'i') },
+          { id: code },
+          { id: cleanCode }
+        ]
+      }).lean();
+      if (doc) return doc;
     } catch (e) {}
   }
   const exams = readFileSafe(examsFile, memExams);
-  return exams.find((e) => e.code === cleanCode || e.id === code) || null;
+  return exams.find((e) => (e.code && e.code.toUpperCase() === cleanCode) || e.id === code || e.id === cleanCode) || null;
 }
 
 export async function saveExam(exam) {

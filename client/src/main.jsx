@@ -337,7 +337,8 @@ function App() {
         candidateName: candidateName || currentUser?.name || 'Anonymous Candidate',
         candidateEmail: candidateEmail || currentUser?.email || '',
         answers,
-        timeSpentSeconds: timeSpentTotal
+        timeSpentSeconds: timeSpentTotal,
+        examSnapshot: candidateExam
       };
 
       const res = await authApi.post(`/exams/${candidateExam.code}/submit`, payload);

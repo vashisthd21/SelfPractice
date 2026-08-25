@@ -1155,21 +1155,25 @@ app.get('/api/exams/:code', async (req, res) => {
 app.post('/api/exams/:code/submit', async (req, res) => {
   try {
     const code = req.params.code.trim().toUpperCase();
-    const { candidateName, candidateEmail, answers, timeSpentSeconds } = req.body;
-    const exam = await findExamByCode(code);
+    const { candidateName, candidateEmail, answers, timeSpentSeconds, examSnapshot } = req.body;
+    let exam = await findExamByCode(code);
 
-    if (!exam) {
-      return res.status(404).json({ message: 'Exam not found' });
+    if (!exam && examSnapshot && examSnapshot.questions) {
+      exam = examSnapshot;
     }
 
-    const result = evaluate(exam, answers || {}, exam.answerKey);
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found or has expired. Please verify the exam code.' });
+    }
+
+    const result = evaluate(exam, answers || {}, exam.answerKey || {});
     const attemptId = `att_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 
     const attempt = {
       id: attemptId,
-      examId: exam.id,
-      examCode: exam.code,
-      examTitle: exam.title,
+      examId: exam.id || `exam_${code}`,
+      examCode: exam.code || code,
+      examTitle: exam.title || 'Practice Examination',
       candidateId: req.user?.id || null,
       candidateName: clean(candidateName) || req.user?.name || 'Anonymous Candidate',
       candidateEmail: clean(candidateEmail) || req.user?.email || '',
