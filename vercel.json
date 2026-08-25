@@ -2,6 +2,11 @@
   "version": 2,
   "buildCommand": "npm --prefix client run build",
   "outputDirectory": "client/dist",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "node_modules/pdfjs-dist/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",

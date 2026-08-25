@@ -4,7 +4,8 @@ import multer from 'multer';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 
 dotenv.config();
 const app = express();
@@ -42,7 +43,12 @@ const writeAttempts = (x) => {
 };
 
 async function pdfText(buffer) {
-  const doc = await getDocument({ data: new Uint8Array(buffer) }).promise;
+  const doc = await pdfjsLib.getDocument({
+    data: new Uint8Array(buffer),
+    useSystemFonts: true,
+    isEvalSupported: false,
+    disableFontFace: true
+  }).promise;
   let pages = [];
   for (let i = 1; i <= doc.numPages; i++) {
     const p = await doc.getPage(i);
