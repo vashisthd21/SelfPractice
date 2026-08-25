@@ -34,7 +34,17 @@ import {
   Sparkles,
   BookOpen,
   LayoutGrid,
-  X
+  X,
+  KeyRound,
+  Trophy,
+  Share2,
+  Copy,
+  Check,
+  Award,
+  ExternalLink,
+  Users,
+  ShieldCheck,
+  CheckCircle
 } from 'lucide-react';
 import {
   PatternRenderer,
@@ -43,6 +53,8 @@ import {
 } from './components/PatternRenderers';
 import { ScratchPadModal } from './components/ScratchPadModal';
 import { TypeAnalyticsCard } from './components/TypeAnalyticsCard';
+import { CreatorDashboard } from './components/CreatorDashboard';
+import { CandidateJoinModal } from './components/CandidateJoinModal';
 import './styles.css';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -56,49 +68,89 @@ const fmt = (s) => {
 };
 
 function App() {
+  // Navigation states: 'home', 'create-upload', 'create-preview', 'publish-success', 'exam', 'result', 'creator-dashboard', 'history'
   const [screen, setScreen] = useState('home');
-  const [exam, setExam] = useState(null);
-  const [answers, setAnswers] = useState({});
-  const [idx, setIdx] = useState(0);
-  const [seconds, setSeconds] = useState(0);
-  const [key, setKey] = useState(null);
-  const [keyIssues, setKeyIssues] = useState(null);
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [history, setHistory] = useState([]);
+  const [initialCodeParam, setInitialCodeParam] = useState('');
+
+  // Creator flow states
+  const [creatorExam, setCreatorExam] = useState(null);
+  const [creatorAnswerKey, setCreatorAnswerKey] = useState(null);
+  const [creatorKeyIssues, setCreatorKeyIssues] = useState(null);
+  const [publishedExam, setPublishedExam] = useState(null);
+  const [creatorExamTitle, setCreatorExamTitle] = useState('');
+  const [creatorName, setCreatorName] = useState('');
   const [duration, setDuration] = useState(30);
   const [pos, setPos] = useState(1);
   const [neg, setNeg] = useState(0.25);
-  const [scratchpadOpen, setScratchpadOpen] = useState(false);
 
+  // Candidate exam states
+  const [candidateExam, setCandidateExam] = useState(null);
+  const [candidateName, setCandidateName] = useState('');
+  const [candidateEmail, setCandidateEmail] = useState('');
+  const [answers, setAnswers] = useState({});
+  const [idx, setIdx] = useState(0);
+  const [seconds, setSeconds] = useState(0);
+  const [timeSpentTotal, setTimeSpentTotal] = useState(0);
+  const [candidateResult, setCandidateResult] = useState(null);
+
+  // General & UI states
+  const [activeDashboardCode, setActiveDashboardCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [scratchpadOpen, setScratchpadOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  // Check URL parameters on mount (?code=8K2P9Q or ?results=8K2P9Q)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const results = params.get('results') || params.get('dashboard');
+
+    if (results) {
+      setActiveDashboardCode(results.toUpperCase());
+      setScreen('creator-dashboard');
+    } else if (code) {
+      setInitialCodeParam(code.toUpperCase());
+      setScreen('home');
+    }
+  }, []);
+
+  // Exam Countdown Timer
   useEffect(() => {
     if (screen !== 'exam' || seconds <= 0) return;
-    const t = setInterval(() => setSeconds((s) => s - 1), 1000);
+    const t = setInterval(() => {
+      setSeconds((s) => s - 1);
+      setTimeSpentTotal((t) => t + 1);
+    }, 1000);
     return () => clearInterval(t);
   }, [screen, seconds]);
 
+  // Auto-submit when time expires
   useEffect(() => {
-    if (screen === 'exam' && seconds === 0 && exam) {
-      submitExam();
+    if (screen === 'exam' && seconds === 0 && candidateExam) {
+      submitCandidateExam();
     }
   }, [seconds]);
 
-  async function parseQuestions(file) {
+  // -------------------------------------------------------------
+  // CREATOR ACTIONS
+  // -------------------------------------------------------------
+
+  async function handleUploadQuestions(file) {
     setLoading(true);
     setError('');
     try {
       const fd = new FormData();
       fd.append('file', file);
       const r = await api.post('/parse/questions', fd);
-      if (!r.data.questions.length) throw new Error('No MCQ questions were detected.');
-      setExam({
-        title: file.name.replace(/\.pdf$/i, ''),
+      if (!r.data.questions?.length) throw new Error('No questions were detected in this PDF.');
+      setCreatorExam({
+        title: file.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' '),
         questions: r.data.questions,
-        warnings: r.data.warnings || [],
-        config: { positiveMarks: pos, negativeMarks: neg }
+        warnings: r.data.warnings || []
       });
-      setScreen('preview');
+      setCreatorExamTitle(file.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' '));
     } catch (e) {
       setError(e.response?.data?.message || e.message);
     } finally {
@@ -106,15 +158,90 @@ function App() {
     }
   }
 
-  function start() {
+  async function handleUploadAnswerKey(file) {
+    setLoading(true);
+    setError('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await api.post('/parse/answer-key', fd);
+      const parsed = r.data.answers || {};
+
+      const missing = (creatorExam?.questions || [])
+        .map((q) => q.questionNumber)
+        .filter((n) => parsed[n] === undefined);
+
+      const invalid = (creatorExam?.questions || [])
+        .map((q) => ({
+          questionNumber: q.questionNumber,
+          answer: parsed[q.questionNumber],
+          options: Object.keys(q.options || {})
+        }))
+        .filter((x) => x.answer !== undefined && !x.options.includes(x.answer));
+
+      setCreatorAnswerKey(parsed);
+      if (missing.length || invalid.length) {
+        setCreatorKeyIssues({ missing, invalid });
+      }
+    } catch (e) {
+      setError(e.response?.data?.message || e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePublishExam() {
+    if (!creatorExam?.questions?.length) {
+      setError('Please upload question paper PDF first.');
+      return;
+    }
+    if (!creatorAnswerKey || !Object.keys(creatorAnswerKey).length) {
+      setError('Please upload answer key PDF before publishing.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      const payload = {
+        title: creatorExamTitle || creatorExam.title || 'Practice Examination',
+        creatorName: creatorName || 'Exam Creator',
+        config: {
+          duration,
+          positiveMarks: pos,
+          negativeMarks: neg
+        },
+        questions: creatorExam.questions,
+        answerKey: creatorAnswerKey
+      };
+
+      const res = await api.post('/exams/create', payload);
+      setPublishedExam(res.data.exam);
+      setScreen('publish-success');
+    } catch (e) {
+      setError(e.response?.data?.message || e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // -------------------------------------------------------------
+  // CANDIDATE ACTIONS
+  // -------------------------------------------------------------
+
+  function handleStartCandidateExam({ exam, candidateName: cName, candidateEmail: cEmail }) {
+    setCandidateExam(exam);
+    setCandidateName(cName);
+    setCandidateEmail(cEmail);
     setAnswers({});
     setIdx(0);
-    setSeconds(duration * 60);
+    setSeconds((exam.config?.duration || 30) * 60);
+    setTimeSpentTotal(0);
     setScreen('exam');
   }
 
-  function choose(v) {
-    const q = exam.questions[idx];
+  function chooseOption(v) {
+    const q = candidateExam.questions[idx];
     setAnswers((a) => ({
       ...a,
       [q.questionNumber]: {
@@ -126,7 +253,7 @@ function App() {
   }
 
   function toggleFlag() {
-    const q = exam.questions[idx];
+    const q = candidateExam.questions[idx];
     setAnswers((a) => ({
       ...a,
       [q.questionNumber]: {
@@ -137,8 +264,8 @@ function App() {
     }));
   }
 
-  function navigate(next) {
-    const q = exam.questions[idx];
+  function navigateQuestion(next) {
+    const q = candidateExam.questions[idx];
     setAnswers((a) => ({
       ...a,
       [q.questionNumber]: {
@@ -149,54 +276,23 @@ function App() {
         enteredAt: Date.now()
       }
     }));
-    setIdx(Math.max(0, Math.min(exam.questions.length - 1, next)));
+    setIdx(Math.max(0, Math.min(candidateExam.questions.length - 1, next)));
   }
 
-  async function submitExam() {
-    if (!exam) return;
-    setScreen('key');
-  }
-
-  async function parseKey(file) {
+  async function submitCandidateExam() {
+    if (!candidateExam) return;
     setLoading(true);
     setError('');
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const r = await api.post('/parse/answer-key', fd);
-      const parsed = r.data.answers || {};
-      const missing = exam.questions.map((q) => q.questionNumber).filter((n) => parsed[n] === undefined);
-      const invalid = exam.questions
-        .map((q) => ({
-          questionNumber: q.questionNumber,
-          answer: parsed[q.questionNumber],
-          options: Object.keys(q.options || {})
-        }))
-        .filter((x) => x.answer !== undefined && !x.options.includes(x.answer));
+      const payload = {
+        candidateName: candidateName || 'Anonymous Candidate',
+        candidateEmail: candidateEmail || '',
+        answers,
+        timeSpentSeconds: timeSpentTotal
+      };
 
-      setKey(parsed);
-      if (missing.length || invalid.length) {
-        setKeyIssues({ missing, invalid });
-        setScreen('key-review');
-      } else {
-        const ev = await api.post('/evaluate', { exam, answers, answerKey: parsed });
-        setResult(ev.data.result);
-        setScreen('result');
-      }
-    } catch (e) {
-      setError(e.response?.data?.message || e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function evaluateKey(finalKey) {
-    setLoading(true);
-    setError('');
-    try {
-      const ev = await api.post('/evaluate', { exam, answers, answerKey: finalKey });
-      setKey(finalKey);
-      setResult(ev.data.result);
+      const res = await api.post(`/exams/${candidateExam.code}/submit`, payload);
+      setCandidateResult(res.data.result);
       setScreen('result');
     } catch (e) {
       setError(e.response?.data?.message || e.message);
@@ -205,417 +301,453 @@ function App() {
     }
   }
 
-  async function loadHistory() {
-    setLoading(true);
-    try {
-      const r = await api.get('/attempts');
-      setHistory(r.data);
-      setScreen('history');
-    } finally {
-      setLoading(false);
-    }
-  }
+  const handleCopyShareLink = (code) => {
+    const origin = window.location.origin;
+    const url = `${origin}/?code=${code}`;
+    navigator.clipboard.writeText(url);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleCopyCode = (code) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
 
   return (
-    <>
-      {screen === 'home' && <Home onCreate={() => setScreen('upload')} onHistory={loadHistory} />}
-      {screen === 'upload' && (
-        <UploadPage
-          onFile={parseQuestions}
-          loading={loading}
-          error={error}
-          duration={duration}
-          setDuration={setDuration}
-          pos={pos}
-          setPos={setPos}
-          neg={neg}
-          setNeg={setNeg}
-          onBack={() => setScreen('home')}
-        />
+    <div className="app">
+      {/* Universal Header */}
+      {screen !== 'exam' && (
+        <header>
+          <div className="brand" onClick={() => setScreen('home')}>
+            <span className="brandmark">E</span>
+            <div>
+              <b>ExamLens</b>
+              <small>Multi-User Exam Hosting · Pattern Analytics</small>
+            </div>
+          </div>
+          <div className="header-nav-actions">
+            <button
+              type="button"
+              className={screen === 'home' ? 'ghost active-tab' : 'ghost'}
+              onClick={() => setScreen('home')}
+            >
+              Home
+            </button>
+            <button
+              type="button"
+              className={screen === 'create-upload' ? 'ghost active-tab' : 'ghost'}
+              onClick={() => setScreen('create-upload')}
+            >
+              + Create Exam
+            </button>
+            <button
+              type="button"
+              className={screen === 'creator-dashboard' ? 'ghost active-tab' : 'ghost'}
+              onClick={() => {
+                setActiveDashboardCode(publishedExam?.code || '');
+                setScreen('creator-dashboard');
+              }}
+            >
+              Results & Leaderboards
+            </button>
+          </div>
+        </header>
       )}
-      {screen === 'preview' && (
-        <Preview exam={exam} setExam={setExam} onStart={start} onBack={() => setScreen('upload')} />
+
+      {/* 1. HOMEPAGE */}
+      {screen === 'home' && (
+        <main className="hero-multiuser">
+          <div className="hero-left-section">
+            <span className="eyebrow">EXAM HOSTING & PRACTICE PLATFORM</span>
+            <h1>
+              Create, share, and solve exams with <em>interactive pattern AI.</em>
+            </h1>
+            <p>
+              Upload your Question Paper & Answer Key PDFs. Generate a shareable 6-digit code or direct link.
+              Candidates solve with specialized tools, while creators track submissions live on the leaderboard.
+            </p>
+
+            <div className="home-action-buttons">
+              <button className="primary host-btn" onClick={() => setScreen('create-upload')}>
+                <Upload size={18} />
+                <span>Create & Host an Exam</span>
+              </button>
+              <button
+                className="secondary"
+                onClick={() => {
+                  setActiveDashboardCode(publishedExam?.code || '');
+                  setScreen('creator-dashboard');
+                }}
+              >
+                <Trophy size={18} />
+                <span>View Results & Leaderboard</span>
+              </button>
+            </div>
+
+            <div className="features-pill-row">
+              <span className="feat-pill">⚡ Auto Pattern AI</span>
+              <span className="feat-pill">🔗 Unique 6-Digit Code</span>
+              <span className="feat-pill">🏆 Live Leaderboard</span>
+              <span className="feat-pill">📱 iPhone 13 Optimized</span>
+            </div>
+          </div>
+
+          <div className="hero-right-join-card">
+            <CandidateJoinModal
+              initialCode={initialCodeParam}
+              onStartExam={handleStartCandidateExam}
+            />
+          </div>
+        </main>
       )}
-      {screen === 'exam' && (
+
+      {/* 2. CREATOR EXAM CREATION WORKFLOW */}
+      {screen === 'create-upload' && (
+        <main className="content">
+          <div className="page-title">
+            <div>
+              <span className="eyebrow">STEP 1 OF 2 · HOST AN EXAM</span>
+              <h2>Upload Exam & Answer Key</h2>
+              <p>Upload your Question Paper PDF and Answer Key PDF to generate your unique shareable exam code.</p>
+            </div>
+          </div>
+
+          <div className="create-grid-layout">
+            {/* Question PDF Upload */}
+            <div className="panel upload-sub-card">
+              <div className="card-top-icon">
+                <FileText size={24} className="blue-icon" />
+                <b>1. Question Paper PDF</b>
+              </div>
+              <p>Upload standard MCQ question paper (PDF format).</p>
+
+              <label className="drop drop-compact">
+                <Upload size={28} />
+                <b>{creatorExam ? `✓ ${creatorExam.questions.length} questions detected` : 'Drop Question Paper PDF'}</b>
+                <span>{creatorExam ? creatorExam.title : 'Supports PDF up to 20MB'}</span>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => e.target.files[0] && handleUploadQuestions(e.target.files[0])}
+                />
+              </label>
+            </div>
+
+            {/* Answer Key PDF Upload */}
+            <div className="panel upload-sub-card">
+              <div className="card-top-icon">
+                <ShieldCheck size={24} className="green-icon" />
+                <b>2. Answer Key PDF</b>
+              </div>
+              <p>Upload official answer key PDF to enable automated scoring.</p>
+
+              <label className="drop drop-compact">
+                <FileText size={28} />
+                <b>{creatorAnswerKey ? `✓ ${Object.keys(creatorAnswerKey).length} answers extracted` : 'Drop Answer Key PDF'}</b>
+                <span>Supports tables, standard keys & compact formats</span>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => e.target.files[0] && handleUploadAnswerKey(e.target.files[0])}
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* Exam Configuration Form */}
+          <div className="panel exam-config-panel">
+            <h3>Exam Settings & Rules</h3>
+            <div className="config-grid-full">
+              <label>
+                EXAM TITLE
+                <input
+                  type="text"
+                  value={creatorExamTitle}
+                  placeholder="e.g. IBPS PO Reasoning Mock Test 1"
+                  onChange={(e) => setCreatorExamTitle(e.target.value)}
+                />
+              </label>
+              <label>
+                CREATOR / INSTITUTION NAME
+                <input
+                  type="text"
+                  value={creatorName}
+                  placeholder="e.g. Prof. Sharma or Apex Academy"
+                  onChange={(e) => setCreatorName(e.target.value)}
+                />
+              </label>
+              <label>
+                TIME DURATION (MINUTES)
+                <input
+                  type="number"
+                  min="1"
+                  value={duration}
+                  onChange={(e) => setDuration(+e.target.value)}
+                />
+              </label>
+              <label>
+                POSITIVE MARKS / CORRECT
+                <input
+                  type="number"
+                  step="0.25"
+                  value={pos}
+                  onChange={(e) => setPos(+e.target.value)}
+                />
+              </label>
+              <label>
+                NEGATIVE MARKS / WRONG
+                <input
+                  type="number"
+                  step="0.05"
+                  value={neg}
+                  onChange={(e) => setNeg(+e.target.value)}
+                />
+              </label>
+            </div>
+
+            {error && <div className="error">{error}</div>}
+
+            <div className="actions bottom" style={{ marginTop: 24 }}>
+              <button className="secondary" onClick={() => setScreen('home')}>
+                Cancel
+              </button>
+              <button
+                className="primary"
+                disabled={loading || !creatorExam || !creatorAnswerKey}
+                onClick={() => setScreen('create-preview')}
+              >
+                {loading ? 'Processing…' : 'Preview & Verify Patterns →'}
+              </button>
+            </div>
+          </div>
+        </main>
+      )}
+
+      {/* 3. CREATOR PREVIEW & PUBLISH */}
+      {screen === 'create-preview' && creatorExam && (
+        <main className="content">
+          <div className="page-title">
+            <div>
+              <span className="eyebrow">STEP 2 OF 2 · PATTERN VERIFICATION</span>
+              <h2>{creatorExamTitle || creatorExam.title}</h2>
+              <p>
+                {creatorExam.questions.length} questions extracted · Answer key: {Object.keys(creatorAnswerKey || {}).length} verified
+              </p>
+            </div>
+            <button className="primary publish-btn" onClick={handlePublishExam} disabled={loading}>
+              <Sparkles size={18} />
+              <span>{loading ? 'Publishing…' : 'Publish & Generate Exam Code'}</span>
+            </button>
+          </div>
+
+          <div className="preview-grid">
+            {creatorExam.questions.map((q) => (
+              <div className="question-card" key={q.questionNumber}>
+                <div className="qtop">
+                  <div className="qtop-left">
+                    <b>Q{q.questionNumber}</b>
+                    <PatternBadge type={q.questionType} customLabel={q.questionTypeLabel} size="small" />
+                  </div>
+                  <span className="key-tag-preview">
+                    Key: <b>{creatorAnswerKey?.[q.questionNumber] || '—'}</b>
+                  </span>
+                </div>
+                <div className="preview-rendered-box">
+                  <PatternRenderer question={q} selectedOption={null} onSelectOption={() => {}} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
+      )}
+
+      {/* 4. PUBLISH SUCCESS SCREEN */}
+      {screen === 'publish-success' && publishedExam && (
+        <main className="content">
+          <div className="panel publish-success-card center">
+            <div className="success-icon-wrap">
+              <CheckCircle size={44} className="green-icon" />
+            </div>
+            <span className="eyebrow">EXAM PUBLISHED SUCCESSFULLY</span>
+            <h2>{publishedExam.title}</h2>
+            <p>Your exam is now live! Share this unique code or direct link with students to attempt.</p>
+
+            <div className="code-highlight-card">
+              <span className="code-sub-label">UNIQUE EXAM CODE</span>
+              <div className="big-code-display">{publishedExam.code}</div>
+              <button
+                type="button"
+                className="secondary copy-code-action"
+                onClick={() => handleCopyCode(publishedExam.code)}
+              >
+                {copiedCode ? <Check size={16} className="green-icon" /> : <Copy size={16} />}
+                <span>{copiedCode ? 'Code Copied!' : 'Copy Code'}</span>
+              </button>
+            </div>
+
+            <div className="link-share-container">
+              <label>DIRECT STUDENT JOIN LINK:</label>
+              <div className="link-input-group">
+                <input
+                  type="text"
+                  readOnly
+                  value={`${window.location.origin}/?code=${publishedExam.code}`}
+                />
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={() => handleCopyShareLink(publishedExam.code)}
+                >
+                  {copiedLink ? <Check size={16} /> : <Share2 size={16} />}
+                  <span>{copiedLink ? 'Link Copied!' : 'Copy Link'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="publish-next-actions">
+              <button
+                className="primary dashboard-trigger-btn"
+                onClick={() => {
+                  setActiveDashboardCode(publishedExam.code);
+                  setScreen('creator-dashboard');
+                }}
+              >
+                <Trophy size={18} />
+                <span>Go to Creator Results & Leaderboard</span>
+              </button>
+              <button
+                className="secondary"
+                onClick={() => {
+                  handleStartCandidateExam({
+                    exam: publishedExam,
+                    candidateName: 'Test Candidate',
+                    candidateEmail: ''
+                  });
+                }}
+              >
+                <Play size={18} />
+                <span>Take Test as Candidate (Preview)</span>
+              </button>
+            </div>
+          </div>
+        </main>
+      )}
+
+      {/* 5. CANDIDATE EXAM EXPERIENCE */}
+      {screen === 'exam' && candidateExam && (
         <ExamPage
-          exam={exam}
+          exam={candidateExam}
+          candidateName={candidateName}
           answers={answers}
           idx={idx}
           seconds={seconds}
-          choose={choose}
+          choose={chooseOption}
           toggleFlag={toggleFlag}
-          navigate={navigate}
-          onSubmit={submitExam}
+          navigate={navigateQuestion}
+          onSubmit={submitCandidateExam}
           onOpenScratchpad={() => setScratchpadOpen(true)}
         />
       )}
-      {screen === 'key' && (
-        <KeyPage loading={loading} error={error} onFile={parseKey} onBack={() => setScreen('exam')} />
+
+      {/* 6. CANDIDATE RESULT SCORECARD */}
+      {screen === 'result' && candidateResult && candidateExam && (
+        <main className="content">
+          <div className="result-hero">
+            <div>
+              <span className="eyebrow">EXAM SCORECARD</span>
+              <h2>{candidateExam.title}</h2>
+              <p>Candidate: <b>{candidateName}</b> · Submitted: {new Date().toLocaleTimeString()}</p>
+            </div>
+            <div className="score">
+              <b>{Number(candidateResult.score).toFixed(2)}</b>
+              <span>/ {candidateResult.maxScore}</span>
+            </div>
+          </div>
+
+          <div className="kpis">
+            <Kpi icon={<CheckCircle2 className="green-icon" />} label="Correct" value={candidateResult.correct} />
+            <Kpi icon={<XCircle className="red-icon" />} label="Wrong" value={candidateResult.wrong} />
+            <Kpi icon={<MinusCircle className="gray-icon" />} label="Unattempted" value={candidateResult.unattempted} />
+            <Kpi label="Accuracy" value={`${candidateResult.accuracy.toFixed(1)}%`} />
+            <Kpi label="Attempt Rate" value={`${candidateResult.attemptRate.toFixed(1)}%`} />
+          </div>
+
+          <TypeAnalyticsCard typeResults={candidateResult.typeResults || []} />
+
+          {/* Question-by-Question Review */}
+          <div className="panel review" style={{ marginTop: 20 }}>
+            <div className="review-head">
+              <div>
+                <h3>Question Review & Answer Key</h3>
+                <span>Compare your responses with the official key</span>
+              </div>
+            </div>
+
+            <div className="review-rows-container">
+              {candidateResult.questionResults.map((r) => {
+                const q = candidateExam.questions.find((x) => x.questionNumber === r.questionNumber);
+                return (
+                  <div className="review-row-enhanced" key={r.questionNumber}>
+                    <div className="r-left">
+                      <b>Q{r.questionNumber}</b>
+                      <PatternBadge type={r.questionType} customLabel={r.questionTypeLabel} size="small" />
+                    </div>
+                    <div className="r-question-preview">
+                      <span className="r-qtext">{q?.questionText || ''}</span>
+                    </div>
+                    <div className="r-ans-block">
+                      <span className="ans-tag your-ans">
+                        Your: <b>{r.selectedAnswer || 'None'}</b>
+                      </span>
+                      <span className="ans-tag correct-ans">
+                        Key: <b>{r.correctAnswer || '—'}</b>
+                      </span>
+                    </div>
+                    <span className={`status ${r.status}`}>{r.status}</span>
+                    <span className="time-tag">{fmt(r.timeSpent)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="actions bottom">
+            <button
+              className="secondary"
+              onClick={() => {
+                setActiveDashboardCode(candidateExam.code);
+                setScreen('creator-dashboard');
+              }}
+            >
+              <Trophy size={17} />
+              View Batch Leaderboard
+            </button>
+            <button className="primary" onClick={() => setScreen('home')}>
+              Take Another Exam
+            </button>
+          </div>
+        </main>
       )}
-      {screen === 'key-review' && (
-        <KeyReviewPage
-          exam={exam}
-          initialKey={key}
-          issues={keyIssues}
-          onEvaluate={evaluateKey}
-          loading={loading}
-          error={error}
+
+      {/* 7. CREATOR DASHBOARD & LEADERBOARD */}
+      {screen === 'creator-dashboard' && (
+        <CreatorDashboard
+          examCode={activeDashboardCode}
+          onBack={() => setScreen('home')}
+          onSelectExam={(code) => setActiveDashboardCode(code)}
         />
       )}
-      {screen === 'result' && (
-        <ResultPage
-          exam={exam}
-          result={result}
-          onHome={() => setScreen('home')}
-          onHistory={loadHistory}
-        />
-      )}
-      {screen === 'history' && <HistoryPage items={history} onBack={() => setScreen('home')} />}
 
       <ScratchPadModal isOpen={scratchpadOpen} onClose={() => setScratchpadOpen(false)} />
-    </>
-  );
-}
-
-function Shell({ children, onBack }) {
-  return (
-    <div className="app">
-      <header>
-        <div className="brand" onClick={onBack || undefined}>
-          <span className="brandmark">E</span>
-          <div>
-            <b>ExamLens</b>
-            <small>AI Pattern Extraction · Exam Practice</small>
-          </div>
-        </div>
-        {onBack && (
-          <button className="ghost" onClick={onBack}>
-            Back
-          </button>
-        )}
-      </header>
-      {children}
     </div>
-  );
-}
-
-function Home({ onCreate, onHistory }) {
-  return (
-    <Shell>
-      <main className="hero">
-        <div className="hero-copy">
-          <span className="eyebrow">SMART EXAM ENGINE</span>
-          <h1>
-            Auto-detect question patterns & practice with <em>interactive UI.</em>
-          </h1>
-          <p>
-            Upload any exam PDF. ExamLens automatically detects question types—like Reading Comprehension,
-            Syllogisms, Seating Arrangements, Coding-Decoding, Inequalities, and Para-Jumbles—and renders
-            custom-built solving tools for each pattern.
-          </p>
-          <div className="actions">
-            <button className="primary" onClick={onCreate}>
-              <Upload size={18} />
-              Upload Question Paper
-            </button>
-            <button className="secondary" onClick={onHistory}>
-              <History size={18} />
-              Previous Attempts
-            </button>
-          </div>
-        </div>
-
-        <div className="hero-card">
-          <div className="mock-head">
-            <span className="pattern-badge-demo">
-              <Sparkles size={13} /> Syllogism Pattern
-            </span>
-            <span className="live">● ACTIVE SOLVER</span>
-          </div>
-          <div className="mock-syllogism">
-            <div className="mock-stmt">
-              <b>Statements:</b>
-              <span>● Some books are papers.</span>
-              <span>● All papers are files.</span>
-            </div>
-            <div className="mock-conc">
-              <b>Conclusions:</b>
-              <div className="mock-conc-row">
-                <span>I. Some books are files.</span>
-                <span className="mock-tag follows">Follows ✓</span>
-              </div>
-            </div>
-          </div>
-          <div className="mock-stats">
-            <div>
-              <b>30</b>
-              <span>Questions</span>
-            </div>
-            <div>
-              <b>8+</b>
-              <span>Patterns</span>
-            </div>
-            <div>
-              <b>Real-time</b>
-              <span>Analytics</span>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      <section className="features">
-        {[
-          ['🧩', 'Pattern Recognition', 'Auto-classifies RC, Syllogisms, Circular Puzzles, Cloze Blanks, Inequalities & more.'],
-          ['⚡', 'Interactive UI Modes', 'Live cloze-insertion, conclusion reasoning toggles, clue checklists & formula tools.'],
-          ['📝', 'Built-in Scratchpad', 'Rough sheet drawing board and notes drawer to work through math and puzzles.'],
-          ['📊', 'Pattern-Wise Analytics', 'See your exact accuracy and time spent broken down by each question category.']
-        ].map((x) => (
-          <div className="feature" key={x[0]}>
-            <div className="icon">{x[0]}</div>
-            <h3>{x[1]}</h3>
-            <p>{x[2]}</p>
-          </div>
-        ))}
-      </section>
-    </Shell>
-  );
-}
-
-function UploadPage({
-  onFile,
-  loading,
-  error,
-  duration,
-  setDuration,
-  pos,
-  setPos,
-  neg,
-  setNeg,
-  onBack
-}) {
-  return (
-    <Shell onBack={onBack}>
-      <main className="center">
-        <div className="panel upload-panel">
-          <span className="eyebrow">STEP 1 OF 3</span>
-          <h2>Upload Question Paper</h2>
-          <p>ExamLens will detect questions, passages, options and question patterns automatically.</p>
-
-          <label className="drop">
-            <Upload size={36} />
-            <b>{loading ? 'Analyzing PDF & Extracting Patterns…' : 'Drop PDF here or click to browse'}</b>
-            <span>PDF files up to 20 MB · Standard MCQ formats</span>
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => e.target.files[0] && onFile(e.target.files[0])}
-            />
-          </label>
-
-          {error && <div className="error">{error}</div>}
-
-          <div className="config">
-            <label>
-              Duration (minutes)
-              <input
-                type="number"
-                min="1"
-                value={duration}
-                onChange={(e) => setDuration(+e.target.value)}
-              />
-            </label>
-            <label>
-              Marks / Correct
-              <input
-                type="number"
-                step="0.25"
-                value={pos}
-                onChange={(e) => setPos(+e.target.value)}
-              />
-            </label>
-            <label>
-              Negative Marks / Wrong
-              <input
-                type="number"
-                step="0.05"
-                value={neg}
-                onChange={(e) => setNeg(+e.target.value)}
-              />
-            </label>
-          </div>
-        </div>
-      </main>
-    </Shell>
-  );
-}
-
-function Preview({ exam, setExam, onStart, onBack }) {
-  const [edit, setEdit] = useState(null);
-  const [typeFilter, setTypeFilter] = useState('all');
-
-  const typeCounts = useMemo(() => {
-    const counts = {};
-    (exam.questions || []).forEach((q) => {
-      const t = q.questionType || 'general_mcq';
-      counts[t] = (counts[t] || 0) + 1;
-    });
-    return counts;
-  }, [exam]);
-
-  const filteredQuestions = useMemo(() => {
-    if (typeFilter === 'all') return exam.questions;
-    return exam.questions.filter((q) => (q.questionType || 'general_mcq') === typeFilter);
-  }, [exam, typeFilter]);
-
-  return (
-    <Shell onBack={onBack}>
-      <main className="content">
-        <div className="page-title">
-          <div>
-            <span className="eyebrow">STEP 2 · PREVIEW & PATTERN VERIFICATION</span>
-            <h2>{exam.title}</h2>
-            <p>
-              {exam.questions.length} questions detected across {Object.keys(typeCounts).length} distinct pattern types
-            </p>
-          </div>
-          <button className="primary" onClick={onStart}>
-            <Play size={18} />
-            Start Timed Exam
-          </button>
-        </div>
-
-        <div className="pattern-filter-bar">
-          <button
-            type="button"
-            className={`filter-chip ${typeFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setTypeFilter('all')}
-          >
-            All Questions ({exam.questions.length})
-          </button>
-          {Object.entries(typeCounts).map(([typeKey, count]) => {
-            const conf = TYPE_CONFIG[typeKey] || TYPE_CONFIG.general_mcq;
-            return (
-              <button
-                key={typeKey}
-                type="button"
-                className={`filter-chip ${typeFilter === typeKey ? 'active' : ''}`}
-                onClick={() => setTypeFilter(typeKey)}
-              >
-                <conf.icon size={13} />
-                <span>{conf.label} ({count})</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {exam.warnings?.length > 0 && (
-          <div className="warning">
-            <b>Parser Notes</b>
-            <ul>
-              {exam.warnings.map((w, i) => (
-                <li key={i}>{w}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <div className="preview-grid">
-          {filteredQuestions.map((q, i) => (
-            <div className="question-card" key={q.questionNumber}>
-              <div className="qtop">
-                <div className="qtop-left">
-                  <b>Q{q.questionNumber}</b>
-                  <PatternBadge type={q.questionType} customLabel={q.questionTypeLabel} size="small" />
-                </div>
-                <span>{q.section}</span>
-                <button
-                  className="iconbtn"
-                  onClick={() => setEdit(edit === i ? null : i)}
-                  title="Toggle Edit"
-                >
-                  <Eye size={16} />
-                </button>
-              </div>
-
-              {edit === i ? (
-                <div className="editbox">
-                  <label>
-                    <small>Question Type:</small>
-                    <select
-                      value={q.questionType || 'general_mcq'}
-                      onChange={(e) => {
-                        const qs = [...exam.questions];
-                        const realIdx = exam.questions.findIndex((x) => x.questionNumber === q.questionNumber);
-                        qs[realIdx] = {
-                          ...q,
-                          questionType: e.target.value,
-                          questionTypeLabel: TYPE_CONFIG[e.target.value]?.label || 'Multiple Choice'
-                        };
-                        setExam({ ...exam, questions: qs });
-                      }}
-                      className="type-select"
-                    >
-                      {Object.entries(TYPE_CONFIG).map(([k, v]) => (
-                        <option key={k} value={k}>
-                          {v.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {q.passage && (
-                    <textarea
-                      value={q.passage}
-                      placeholder="Passage / Context"
-                      onChange={(e) => {
-                        const qs = [...exam.questions];
-                        const realIdx = exam.questions.findIndex((x) => x.questionNumber === q.questionNumber);
-                        qs[realIdx] = { ...q, passage: e.target.value };
-                        setExam({ ...exam, questions: qs });
-                      }}
-                    />
-                  )}
-                  <textarea
-                    value={q.questionText}
-                    placeholder="Question Text"
-                    onChange={(e) => {
-                      const qs = [...exam.questions];
-                      const realIdx = exam.questions.findIndex((x) => x.questionNumber === q.questionNumber);
-                      qs[realIdx] = { ...q, questionText: e.target.value };
-                      setExam({ ...exam, questions: qs });
-                    }}
-                  />
-                  {Object.entries(q.options).map(([k, v]) => (
-                    <input
-                      key={k}
-                      value={v}
-                      onChange={(e) => {
-                        const qs = [...exam.questions];
-                        const realIdx = exam.questions.findIndex((x) => x.questionNumber === q.questionNumber);
-                        qs[realIdx] = { ...q, options: { ...q.options, [k]: e.target.value } };
-                        setExam({ ...exam, questions: qs });
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="preview-rendered-box">
-                  <PatternRenderer
-                    question={q}
-                    selectedOption={null}
-                    onSelectOption={() => {}}
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </main>
-    </Shell>
   );
 }
 
 function ExamPage({
   exam,
+  candidateName,
   answers,
   idx,
   seconds,
@@ -651,10 +783,7 @@ function ExamPage({
 
   return (
     <div className="exam">
-      {/* Mobile Palette Backdrop */}
-      {showPalette && (
-        <div className="palette-backdrop" onClick={() => setShowPalette(false)} />
-      )}
+      {showPalette && <div className="palette-backdrop" onClick={() => setShowPalette(false)} />}
 
       <header className="exam-header">
         <div className="brand exam-brand">
@@ -662,7 +791,7 @@ function ExamPage({
           <div className="brand-text-block">
             <b>{exam.title}</b>
             <div className="exam-type-subline">
-              <PatternBadge type={q.questionType} customLabel={q.questionTypeLabel} size="small" />
+              <span className="candidate-name-badge">Candidate: {candidateName}</span>
             </div>
           </div>
         </div>
@@ -708,7 +837,6 @@ function ExamPage({
             <span className="q-section-name">{q.section}</span>
           </div>
 
-          {/* Specialized Pattern Workspace */}
           <div className="pattern-work-area">
             <PatternRenderer
               question={q}
@@ -717,7 +845,6 @@ function ExamPage({
             />
           </div>
 
-          {/* Bottom Nav Bar */}
           <div className="exam-actions">
             <button className="secondary clear-btn" onClick={() => choose(null)}>
               <RotateCcw size={15} />
@@ -819,268 +946,6 @@ function ExamPage({
   );
 }
 
-function KeyPage({ onFile, loading, error, onBack }) {
-  return (
-    <Shell onBack={onBack}>
-      <main className="center">
-        <div className="panel upload-panel">
-          <span className="eyebrow">STEP 3 OF 3</span>
-          <h2>Upload Answer Key</h2>
-          <p>Your attempt has been saved. Upload the official answer-key PDF to evaluate your results.</p>
-          <label className="drop">
-            <FileText size={36} />
-            <b>{loading ? 'Evaluating & Scoring…' : 'Upload Answer-Key PDF'}</b>
-            <span>Supports standard keys, tables, and compact keys (e.g., “1 B”, “Q1: B”)</span>
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => e.target.files[0] && onFile(e.target.files[0])}
-            />
-          </label>
-          {error && <div className="error">{error}</div>}
-        </div>
-      </main>
-    </Shell>
-  );
-}
-
-function KeyReviewPage({ exam, initialKey, issues, onEvaluate, loading, error }) {
-  const [local, setLocal] = useState({ ...initialKey });
-  const fixable = [
-    ...(issues?.missing || []).map((n) => ({
-      questionNumber: n,
-      answer: null,
-      options: Object.keys(exam.questions.find((q) => q.questionNumber === n)?.options || {})
-    })),
-    ...(issues?.invalid || [])
-  ];
-
-  return (
-    <Shell>
-      <main className="content">
-        <div className="page-title">
-          <div>
-            <span className="eyebrow">ANSWER KEY VALIDATION</span>
-            <h2>Review Extracted Answer Key</h2>
-            <p>The PDF answer key contains missing or mismatching options that require confirmation.</p>
-          </div>
-        </div>
-        <div className="panel key-review">
-          <div className="key-issue-list">
-            {fixable.map((item) => {
-              const q = exam.questions.find((x) => x.questionNumber === item.questionNumber);
-              const opts = Object.keys(q?.options || {});
-              return (
-                <div className="key-issue" key={item.questionNumber}>
-                  <div>
-                    <b>Question {item.questionNumber}</b>
-                    <span>{item.answer ? `Extracted answer: ${item.answer}` : 'Answer missing from key'}</span>
-                  </div>
-                  <select
-                    value={local[item.questionNumber] || ''}
-                    onChange={(e) => setLocal({ ...local, [item.questionNumber]: e.target.value })}
-                  >
-                    <option value="">Select answer</option>
-                    {opts.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              );
-            })}
-          </div>
-          {error && <div className="error">{error}</div>}
-          <div className="actions bottom">
-            <button
-              className="primary"
-              disabled={loading || fixable.some((x) => !local[x.questionNumber])}
-              onClick={() => onEvaluate(local)}
-            >
-              {loading ? 'Evaluating…' : 'Confirm & Calculate Result'}
-            </button>
-          </div>
-        </div>
-      </main>
-    </Shell>
-  );
-}
-
-function ResultPage({ exam, result, onHome, onHistory }) {
-  const [reviewFilter, setReviewFilter] = useState('all');
-  const [reviewTypeFilter, setReviewTypeFilter] = useState('all');
-
-  const pie = [
-    { name: 'Correct', value: result.correct, color: '#10b981' },
-    { name: 'Wrong', value: result.wrong, color: '#ef4444' },
-    { name: 'Unattempted', value: result.unattempted, color: '#94a3b8' }
-  ];
-
-  const filteredResults = useMemo(() => {
-    return result.questionResults.filter((r) => {
-      if (reviewFilter !== 'all' && r.status !== reviewFilter) return false;
-      if (reviewTypeFilter !== 'all' && r.questionType !== reviewTypeFilter) return false;
-      return true;
-    });
-  }, [result, reviewFilter, reviewTypeFilter]);
-
-  const availableTypes = useMemo(() => {
-    const set = new Set();
-    result.questionResults.forEach((r) => set.add(r.questionType || 'general_mcq'));
-    return Array.from(set);
-  }, [result]);
-
-  return (
-    <Shell>
-      <main className="content">
-        <div className="result-hero">
-          <div>
-            <span className="eyebrow">SCORECARD & PERFORMANCE</span>
-            <h2>{exam.title}</h2>
-            <p>Here is your comprehensive test breakdown and pattern-wise analytics.</p>
-          </div>
-          <div className="score">
-            <b>{Number(result.score).toFixed(2)}</b>
-            <span>/ {result.maxScore}</span>
-          </div>
-        </div>
-
-        <div className="kpis">
-          <Kpi icon={<CheckCircle2 className="green-icon" />} label="Correct" value={result.correct} />
-          <Kpi icon={<XCircle className="red-icon" />} label="Wrong" value={result.wrong} />
-          <Kpi icon={<MinusCircle className="gray-icon" />} label="Unattempted" value={result.unattempted} />
-          <Kpi label="Overall Accuracy" value={`${result.accuracy.toFixed(1)}%`} />
-          <Kpi label="Attempt Rate" value={`${result.attemptRate.toFixed(1)}%`} />
-        </div>
-
-        <TypeAnalyticsCard typeResults={result.typeResults || []} />
-
-        <div className="charts">
-          <div className="panel chart">
-            <h3>Answer Distribution</h3>
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie
-                  data={pie}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                >
-                  {pie.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="panel chart">
-            <h3>Section Accuracy</h3>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={result.sectionResults}>
-                <XAxis dataKey="sectionName" hide />
-                <YAxis domain={[0, 100]} unit="%" />
-                <Tooltip formatter={(v) => `${Number(v).toFixed(1)}%`} />
-                <Bar dataKey="accuracy" fill="#6366f1" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <div className="section-labels">
-              {result.sectionResults.map((s) => (
-                <span key={s.sectionName}>
-                  <b>{s.accuracy.toFixed(0)}%</b> {s.sectionName}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="panel review">
-          <div className="review-head">
-            <div>
-              <h3>Question-by-Question Review</h3>
-              <span>
-                {result.correct} correct · {result.wrong} wrong · {result.unattempted} unattempted
-              </span>
-            </div>
-
-            <div className="review-filters">
-              <select
-                value={reviewFilter}
-                onChange={(e) => setReviewFilter(e.target.value)}
-                className="review-select"
-              >
-                <option value="all">All Statuses</option>
-                <option value="correct">Correct Only</option>
-                <option value="wrong">Wrong Only</option>
-                <option value="unattempted">Unattempted Only</option>
-              </select>
-
-              <select
-                value={reviewTypeFilter}
-                onChange={(e) => setReviewTypeFilter(e.target.value)}
-                className="review-select"
-              >
-                <option value="all">All Question Types</option>
-                {availableTypes.map((t) => {
-                  const conf = TYPE_CONFIG[t] || TYPE_CONFIG.general_mcq;
-                  return (
-                    <option key={t} value={t}>
-                      {conf.label}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          </div>
-
-          <div className="review-rows-container">
-            {filteredResults.map((r) => {
-              const q = exam.questions.find((x) => x.questionNumber === r.questionNumber);
-              return (
-                <div className="review-row-enhanced" key={r.questionNumber}>
-                  <div className="r-left">
-                    <b>Q{r.questionNumber}</b>
-                    <PatternBadge type={r.questionType} customLabel={r.questionTypeLabel} size="small" />
-                  </div>
-                  <div className="r-question-preview">
-                    <span className="r-qtext">{q?.questionText || ''}</span>
-                  </div>
-                  <div className="r-ans-block">
-                    <span className="ans-tag your-ans">
-                      Your: <b>{r.selectedAnswer || 'None'}</b>
-                    </span>
-                    <span className="ans-tag correct-ans">
-                      Key: <b>{r.correctAnswer || '—'}</b>
-                    </span>
-                  </div>
-                  <span className={`status ${r.status}`}>{r.status}</span>
-                  <span className="time-tag">{fmt(r.timeSpent)}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="actions bottom">
-          <button className="secondary" onClick={onHistory}>
-            <History size={17} />
-            History
-          </button>
-          <button className="primary" onClick={onHome}>
-            Create Another Exam
-          </button>
-        </div>
-      </main>
-    </Shell>
-  );
-}
-
 function Kpi({ icon, label, value }) {
   return (
     <div className="kpi">
@@ -1090,56 +955,6 @@ function Kpi({ icon, label, value }) {
         <span>{label}</span>
       </div>
     </div>
-  );
-}
-
-function HistoryPage({ items, onBack }) {
-  return (
-    <Shell onBack={onBack}>
-      <main className="content">
-        <div className="page-title">
-          <div>
-            <span className="eyebrow">PRACTICE HISTORY</span>
-            <h2>Previous Attempts</h2>
-          </div>
-        </div>
-        <div className="panel history">
-          <table>
-            <thead>
-              <tr>
-                <th>Exam</th>
-                <th>Date</th>
-                <th>Score</th>
-                <th>Accuracy</th>
-                <th>Attempted</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((x) => (
-                <tr key={x.id}>
-                  <td>
-                    <b>{x.examTitle}</b>
-                  </td>
-                  <td>{new Date(x.createdAt).toLocaleString()}</td>
-                  <td>
-                    {Number(x.score).toFixed(2)} / {x.maxScore}
-                  </td>
-                  <td>{x.accuracy.toFixed(1)}%</td>
-                  <td>
-                    {x.attempted}/{x.totalQuestions}
-                  </td>
-                </tr>
-              ))}
-              {!items.length && (
-                <tr>
-                  <td colSpan="5">No attempts recorded yet.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </main>
-    </Shell>
   );
 }
 

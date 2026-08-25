@@ -4,6 +4,7 @@ import multer from 'multer';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 
@@ -14,7 +15,7 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const MAX_MB = Number(process.env.MAX_FILE_SIZE_MB || 20);
 
 app.use(cors({ origin: true }));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '4mb' }));
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -22,25 +23,56 @@ const upload = multer({
   fileFilter: (r, f, cb) => cb(null, f.mimetype === 'application/pdf' || f.originalname.toLowerCase().endsWith('.pdf'))
 });
 
+// Storage initialization (Vercel serverless safe)
 const dataDir = process.env.VERCEL ? '/tmp' : path.resolve('data');
 try {
   fs.mkdirSync(dataDir, { recursive: true });
 } catch (e) {}
 
+const examsFile = path.join(dataDir, 'exams.json');
 const attemptsFile = path.join(dataDir, 'attempts.json');
+
+let inMemoryExams = [];
 let inMemoryAttempts = [];
+
+const readExams = () => {
+  try {
+    if (fs.existsSync(examsFile)) return JSON.parse(fs.readFileSync(examsFile, 'utf8'));
+  } catch (e) {}
+  return inMemoryExams;
+};
+
+const writeExams = (x) => {
+  inMemoryExams = x;
+  try {
+    fs.writeFileSync(examsFile, JSON.stringify(x, null, 2));
+  } catch (e) {}
+};
+
 const readAttempts = () => {
   try {
     if (fs.existsSync(attemptsFile)) return JSON.parse(fs.readFileSync(attemptsFile, 'utf8'));
   } catch (e) {}
   return inMemoryAttempts;
 };
+
 const writeAttempts = (x) => {
   inMemoryAttempts = x;
   try {
     fs.writeFileSync(attemptsFile, JSON.stringify(x, null, 2));
   } catch (e) {}
 };
+
+// Generate memorable 6-character uppercase exam code
+function generateExamCode() {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let code = '';
+  const bytes = crypto.randomBytes(6);
+  for (let i = 0; i < 6; i++) {
+    code += chars[bytes[i] % chars.length];
+  }
+  return code;
+}
 
 async function pdfText(buffer) {
   const doc = await pdfjsLib.getDocument({
@@ -76,6 +108,7 @@ function classifyQuestion(q, fullContext = {}) {
   const combined = `${section} ${dir} ${rawContext} ${text}`;
   const options = q.options || {};
   const optValues = Object.values(options).map((v) => (v || '').trim());
+  const passageSource = (rawContext || dir || '').trim();
 
   // 1. Direction & Distance
   if (
@@ -102,7 +135,7 @@ function classifyQuestion(q, fullContext = {}) {
     };
   }
 
-  // 3. Syllogism (plural statements with standard quantifiers)
+  // 3. Syllogism
   if (
     /syllogism/i.test(section) ||
     (/statements?\s*:\s*[\s\S]*?(?:all|some|no|only a few)\b/i.test(text) && /conclusions?\s*:/i.test(text))
@@ -125,7 +158,7 @@ function classifyQuestion(q, fullContext = {}) {
     };
   }
 
-  // 4. Statement & Conclusion / Assumption
+  // 4. Statement & Conclusion
   if (
     /statement\s*&?\s*conclusion/i.test(section) ||
     (/statement\s*:/i.test(text) && /conclusions?\s*:/i.test(text))
@@ -166,7 +199,7 @@ function classifyQuestion(q, fullContext = {}) {
     /Input\s*:/i.test(text)
   ) {
     const src = rawContext.includes('Input:') ? rawContext : text;
-    const inputMatch = src.match(/Input\s*:\s*(.*?)(?=\n|Step|$)/i);
+    const inputMatch = src.match(/Input\s*:/i) ? src.slice(src.indexOf('Input:')).match(/Input\s*:\s*(.*?)(?=\n|Step|$)/i) : null;
     const stepMatches = [...src.matchAll(/(Step\s+[I|V|X\d]+)\s*:\s*(.*?)(?=\n\s*Step|\n\s*Question|\n\s*\d+\.|$)/gi)];
     const steps = stepMatches.map((m) => ({ step: m[1].trim(), text: m[2].trim() }));
     return {
@@ -218,7 +251,7 @@ function classifyQuestion(q, fullContext = {}) {
     };
   }
 
-  // 9. Seating Arrangement & Puzzles (Clean Clues & Setup Extraction)
+  // 9. Seating Arrangement & Puzzles
   if (
     /puzzle|seating/i.test(section) ||
     /sitting around|facing the centre|circular table|linear row|floor|box puzzle|immediate neighbour/i.test(combined)
@@ -287,8 +320,7 @@ function classifyQuestion(q, fullContext = {}) {
     };
   }
 
-  // 13. Cloze Test
-  const passageSource = (rawContext || dir || '').trim();
+  // 13. Cloze Test (Clean passage extraction)
   if (/cloze/i.test(section) || (passageSource && /\(\d{1,3}\)/.test(passageSource))) {
     const blankMatch = text.match(/\b(?:blank\s*)?\(?(\d{1,3})\)?/i) || [null, String(q.questionNumber)];
     const cleanPassage = passageSource
@@ -367,13 +399,13 @@ function classifyQuestion(q, fullContext = {}) {
   // 18. Reading Comprehension
   if (
     /reading\s*comprehension|\bRC\b/i.test(section) ||
-    (rawContext && rawContext.length > 120 && !/cloze/i.test(section))
+    (passageSource && passageSource.length > 120 && !/cloze/i.test(section))
   ) {
     return {
       type: 'reading_comprehension',
       label: 'Reading Comprehension',
       typeData: {
-        passage: rawContext
+        passage: passageSource
       }
     };
   }
@@ -399,7 +431,6 @@ function parseQuestions(text) {
   t = t.replace(/\s+(?=Directions?\s*(?:\([^)]*\))?(?:\s*:)?)/gi, '\n');
   t = t.replace(/\s*•\s*/g, '\n• ');
   t = t.replace(/\s+(?=(?:Q(?:uestion)?\s*)?\d{1,3}\s*[.)]\s+(?:[A-Za-z0-9"“'\[]|Statements?|Input:|Step\s+I|Directions))/gi, '\n');
-  // Only split options if not followed by a question number
   t = t.replace(/\s+(?=\(?[A-H]\)?\s*[.)]\s+(?!\d{1,3}\s*[.)])[A-Za-z0-9"“'\[])/g, '\n');
 
   const lines = t.split(/\n+/).map((x) => x.trim()).filter(Boolean);
@@ -465,7 +496,6 @@ function parseQuestions(text) {
       pushCurrent();
       let rawSectionTitle = clean(sm[2] || '');
 
-      // If a question number was attached inline to section title, split it
       const inlineQ = rawSectionTitle.match(/^(.*?)\s+(?=(?:Q(?:uestion)?\s*)?\d{1,3}\s*[.)]\s+)/i);
       if (inlineQ) {
         const leftover = rawSectionTitle.slice(inlineQ[1].length).trim();
@@ -555,7 +585,6 @@ function parseQuestions(text) {
   }
   pushCurrent();
 
-  // Keep strongest occurrence if duplicated
   const unique = new Map();
   for (const q of questions) {
     const options = Object.fromEntries(Object.entries(q.options || {}).filter(([k, v]) => v));
@@ -716,8 +745,13 @@ function qOptions(exam, n) {
   return q?.options || {};
 }
 
+// -------------------------------------------------------------
+// API ENDPOINTS
+// -------------------------------------------------------------
+
 app.get('/api/health', (req, res) => res.json({ ok: true, timestamp: new Date().toISOString() }));
 
+// 1. PDF Parsing Helpers
 app.post('/api/parse/questions', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'PDF file is required' });
@@ -753,66 +787,285 @@ app.post('/api/parse/answer-key', upload.single('file'), async (req, res) => {
   }
 });
 
-app.post('/api/evaluate', (req, res) => {
+// 2. EXAM CREATION & HOSTING (CREATOR FLOW)
+app.post('/api/exams/create', (req, res) => {
   try {
-    const { exam, answers, answerKey } = req.body;
-    if (!exam?.questions || !answerKey) return res.status(400).json({ message: 'Exam and answer key are required' });
-
-    const missing = exam.questions.map((q) => q.questionNumber).filter((n) => answerKey[n] === undefined);
-    if (missing.length) {
-      return res.status(400).json({ message: `Answer key is missing: ${missing.join(', ')}`, missing });
+    const { title, creatorName, config, questions, answerKey } = req.body;
+    if (!questions || !questions.length) {
+      return res.status(400).json({ message: 'Exam must contain questions' });
+    }
+    if (!answerKey || !Object.keys(answerKey).length) {
+      return res.status(400).json({ message: 'Answer key is required to create and host an exam' });
     }
 
-    const invalid = exam.questions
-      .map((q) => ({ questionNumber: q.questionNumber, answer: answerKey[q.questionNumber] }))
-      .filter((x) => x.answer && !Object.prototype.hasOwnProperty.call(qOptions(exam, x.questionNumber), x.answer));
-
-    if (invalid.length) {
-      return res.status(400).json({
-        message: `Answer key contains option(s) not present in the question paper: ${invalid
-          .map((x) => `Q${x.questionNumber}=${x.answer}`)
-          .join(', ')}`,
-        invalid
-      });
+    const allExams = readExams();
+    let code = generateExamCode();
+    // Ensure uniqueness
+    while (allExams.some((e) => e.code === code)) {
+      code = generateExamCode();
     }
 
-    const result = evaluate(exam, answers || {}, answerKey);
-    const id = Date.now().toString(36);
-    const attempt = {
+    const adminKey = `adm_${crypto.randomBytes(12).toString('hex')}`;
+    const id = `exam_${Date.now().toString(36)}`;
+
+    const examRecord = {
       id,
+      code,
+      adminKey,
+      title: title || 'Practice Examination',
+      creatorName: creatorName || 'Exam Creator',
       createdAt: new Date().toISOString(),
-      examTitle: exam.title || 'Untitled Exam',
-      exam,
+      config: {
+        duration: Number(config?.duration) || 30,
+        positiveMarks: Number(config?.positiveMarks) || 1,
+        negativeMarks: Number(config?.negativeMarks) || 0.25,
+        cutoffMarks: Number(config?.cutoffMarks) || 0
+      },
+      questions,
+      answerKey
+    };
+
+    allExams.unshift(examRecord);
+    writeExams(allExams);
+
+    res.json({
+      success: true,
+      exam: {
+        id: examRecord.id,
+        code: examRecord.code,
+        title: examRecord.title,
+        creatorName: examRecord.creatorName,
+        totalQuestions: questions.length,
+        config: examRecord.config,
+        createdAt: examRecord.createdAt
+      },
+      adminKey,
+      code
+    });
+  } catch (e) {
+    console.error('Exam creation error:', e);
+    res.status(500).json({ message: 'Could not create exam', error: e.message });
+  }
+});
+
+// 3. CANDIDATE JOIN (FETCH EXAM WITHOUT EXPOSING ANSWER KEY)
+app.get('/api/exams/:code', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const allExams = readExams();
+  const exam = allExams.find((e) => e.code === code || e.id === req.params.code);
+
+  if (!exam) {
+    return res.status(404).json({ message: `No exam found for code "${code}". Please check the code and try again.` });
+  }
+
+  // Return candidate-safe view (strip answerKey to prevent cheating)
+  res.json({
+    id: exam.id,
+    code: exam.code,
+    title: exam.title,
+    creatorName: exam.creatorName,
+    createdAt: exam.createdAt,
+    config: exam.config,
+    totalQuestions: exam.questions.length,
+    questions: exam.questions
+  });
+});
+
+// 4. CANDIDATE EXAM SUBMISSION & INSTANT EVALUATION
+app.post('/api/exams/:code/submit', (req, res) => {
+  try {
+    const code = req.params.code.trim().toUpperCase();
+    const { candidateName, candidateEmail, answers, timeSpentSeconds } = req.body;
+    const allExams = readExams();
+    const exam = allExams.find((e) => e.code === code || e.id === req.params.code);
+
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    const result = evaluate(exam, answers || {}, exam.answerKey);
+    const attemptId = `att_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+
+    const attempt = {
+      id: attemptId,
+      examId: exam.id,
+      examCode: exam.code,
+      examTitle: exam.title,
+      candidateName: clean(candidateName) || 'Anonymous Candidate',
+      candidateEmail: clean(candidateEmail) || '',
+      submittedAt: new Date().toISOString(),
+      timeSpentSeconds: Number(timeSpentSeconds) || 0,
+      answers: answers || {},
       result
     };
-    const all = readAttempts();
-    all.unshift(attempt);
-    writeAttempts(all.slice(0, 100));
-    res.json(attempt);
+
+    const allAttempts = readAttempts();
+    allAttempts.unshift(attempt);
+    writeAttempts(allAttempts);
+
+    res.json({
+      success: true,
+      attemptId,
+      candidateName: attempt.candidateName,
+      submittedAt: attempt.submittedAt,
+      result,
+      exam: {
+        id: exam.id,
+        code: exam.code,
+        title: exam.title,
+        config: exam.config,
+        questions: exam.questions
+      }
+    });
   } catch (e) {
+    console.error('Submission error:', e);
     res.status(500).json({ message: 'Evaluation failed', error: e.message });
   }
 });
 
-app.get('/api/attempts', (req, res) =>
-  res.json(
-    readAttempts().map((a) => ({
-      id: a.id,
-      createdAt: a.createdAt,
-      examTitle: a.examTitle,
-      score: a.result.score,
-      maxScore: a.result.maxScore,
-      accuracy: a.result.accuracy,
-      attempted: a.result.attempted,
-      totalQuestions: a.result.totalQuestions
-    }))
-  )
-);
+// 5. CREATOR RESULTS & LEADERBOARD DASHBOARD
+app.get('/api/exams/:code/analytics', (req, res) => {
+  try {
+    const code = req.params.code.trim().toUpperCase();
+    const allExams = readExams();
+    const exam = allExams.find((e) => e.code === code || e.id === req.params.code);
 
-app.get('/api/attempts/:id', (req, res) => {
-  const a = readAttempts().find((x) => x.id === req.params.id);
-  if (!a) return res.status(404).json({ message: 'Attempt not found' });
-  res.json(a);
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    const allAttempts = readAttempts();
+    const examAttempts = allAttempts.filter((a) => a.examCode === exam.code || a.examId === exam.id);
+
+    // Sort leaderboard by score descending, then time spent ascending
+    const leaderboard = examAttempts
+      .map((a) => ({
+        attemptId: a.id,
+        candidateName: a.candidateName,
+        candidateEmail: a.candidateEmail,
+        score: a.result.score,
+        maxScore: a.result.maxScore,
+        accuracy: a.result.accuracy,
+        attempted: a.result.attempted,
+        correct: a.result.correct,
+        wrong: a.result.wrong,
+        unattempted: a.result.unattempted,
+        timeSpentSeconds: a.timeSpentSeconds,
+        submittedAt: a.submittedAt
+      }))
+      .sort((a, b) => b.score - a.score || a.timeSpentSeconds - b.timeSpentSeconds);
+
+    // Compute aggregated batch metrics
+    const totalCandidates = leaderboard.length;
+    let avgScore = 0,
+      highestScore = 0,
+      lowestScore = 0,
+      avgAccuracy = 0,
+      avgTimeSeconds = 0;
+
+    if (totalCandidates > 0) {
+      const scores = leaderboard.map((x) => x.score);
+      highestScore = Math.max(...scores);
+      lowestScore = Math.min(...scores);
+      avgScore = scores.reduce((a, b) => a + b, 0) / totalCandidates;
+      avgAccuracy = leaderboard.reduce((a, b) => a + b.accuracy, 0) / totalCandidates;
+      avgTimeSeconds = leaderboard.reduce((a, b) => a + b.timeSpentSeconds, 0) / totalCandidates;
+    }
+
+    // Aggregate pattern difficulty across entire batch
+    const patternSummary = {};
+    for (const a of examAttempts) {
+      const typeResults = a.result?.typeResults || [];
+      for (const t of typeResults) {
+        patternSummary[t.type] ||= {
+          type: t.type,
+          label: t.label,
+          totalQuestions: 0,
+          totalCorrect: 0,
+          totalAttempted: 0,
+          attemptsCount: 0
+        };
+        const p = patternSummary[t.type];
+        p.totalQuestions += t.total;
+        p.totalCorrect += t.correct;
+        p.totalAttempted += t.attempted;
+        p.attemptsCount++;
+      }
+    }
+
+    const batchPatternAnalytics = Object.values(patternSummary).map((p) => ({
+      type: p.type,
+      label: p.label,
+      avgAccuracy: p.totalAttempted ? (p.totalCorrect / p.totalAttempted) * 100 : 0,
+      totalAttempted: p.totalAttempted
+    }));
+
+    res.json({
+      exam: {
+        id: exam.id,
+        code: exam.code,
+        title: exam.title,
+        creatorName: exam.creatorName,
+        createdAt: exam.createdAt,
+        totalQuestions: exam.questions.length,
+        config: exam.config
+      },
+      stats: {
+        totalCandidates,
+        highestScore: Number(highestScore.toFixed(2)),
+        lowestScore: Number(lowestScore.toFixed(2)),
+        avgScore: Number(avgScore.toFixed(2)),
+        avgAccuracy: Number(avgAccuracy.toFixed(1)),
+        avgTimeSeconds: Math.round(avgTimeSeconds)
+      },
+      leaderboard,
+      batchPatternAnalytics
+    });
+  } catch (e) {
+    console.error('Analytics error:', e);
+    res.status(500).json({ message: 'Could not fetch analytics', error: e.message });
+  }
+});
+
+// 6. SPECIFIC STUDENT ATTEMPT DETAILS
+app.get('/api/attempts/:attemptId', (req, res) => {
+  const allAttempts = readAttempts();
+  const attempt = allAttempts.find((a) => a.id === req.params.attemptId);
+  if (!attempt) return res.status(404).json({ message: 'Attempt record not found' });
+
+  const allExams = readExams();
+  const exam = allExams.find((e) => e.code === attempt.examCode || e.id === attempt.examId);
+
+  res.json({
+    attempt,
+    exam: exam
+      ? {
+          title: exam.title,
+          code: exam.code,
+          config: exam.config,
+          questions: exam.questions
+        }
+      : null
+  });
+});
+
+// 7. LIST OF CREATED EXAMS (FOR CREATOR DASHBOARD SELECTION)
+app.get('/api/exams', (req, res) => {
+  const allExams = readExams();
+  const allAttempts = readAttempts();
+
+  res.json(
+    allExams.map((e) => ({
+      id: e.id,
+      code: e.code,
+      title: e.title,
+      creatorName: e.creatorName,
+      createdAt: e.createdAt,
+      totalQuestions: e.questions.length,
+      duration: e.config?.duration || 30,
+      totalAttempts: allAttempts.filter((a) => a.examCode === e.code || a.examId === e.id).length
+    }))
+  );
 });
 
 if (!process.env.VERCEL) {
