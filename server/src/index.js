@@ -706,11 +706,11 @@ function qOptions(exam, n) {
   return q?.options || {};
 }
 
-app.get('/api/health', (req, res) => res.json({ ok: true }));
+app.get('/api/health', (req, res) => res.json({ ok: true, timestamp: new Date().toISOString() }));
 
 app.post('/api/parse/questions', upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'PDF is required' });
+    if (!req.file) return res.status(400).json({ message: 'PDF file is required' });
     const text = await pdfText(req.file.buffer);
     const parsed = parseQuestions(text);
     res.json({
@@ -720,13 +720,14 @@ app.post('/api/parse/questions', upload.single('file'), async (req, res) => {
       rawTextLength: text.length
     });
   } catch (e) {
-    res.status(500).json({ message: 'Could not parse question PDF', error: e.message });
+    console.error('Parse questions error:', e);
+    res.status(500).json({ message: `Could not parse question PDF: ${e.message}`, error: e.message });
   }
 });
 
 app.post('/api/parse/answer-key', upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'PDF is required' });
+    if (!req.file) return res.status(400).json({ message: 'PDF file is required' });
     const text = await pdfText(req.file.buffer);
     const answers = parseAnswerKey(text);
     res.json({
@@ -737,7 +738,8 @@ app.post('/api/parse/answer-key', upload.single('file'), async (req, res) => {
         .map(([q, a]) => ({ questionNumber: Number(q), answer: a }))
     });
   } catch (e) {
-    res.status(500).json({ message: 'Could not parse answer-key PDF', error: e.message });
+    console.error('Parse answer key error:', e);
+    res.status(500).json({ message: `Could not parse answer-key PDF: ${e.message}`, error: e.message });
   }
 });
 
