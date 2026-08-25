@@ -1,0 +1,622 @@
+[
+  {
+    "id": "exam_mt8rm40t",
+    "code": "Z376FM",
+    "adminKey": "adm_ffb61cc5c52dadc8659db46e",
+    "creatorId": "guest",
+    "creatorEmail": "",
+    "title": "English Language Practice Set 1",
+    "creatorName": "Professor X",
+    "createdAt": "2026-08-25T14:33:28.541Z",
+    "config": {
+      "duration": 30,
+      "positiveMarks": 1,
+      "negativeMarks": 0.25,
+      "cutoffMarks": 0
+    },
+    "questions": [
+      {
+        "questionNumber": 1,
+        "questionText": "What is the main idea of the passage?",
+        "options": {
+          "A": "Branch banking will completely disappear",
+          "B": "Digital banking is convenient but requires responsible usage",
+          "C": "Banks are responsible for all online fraud",
+          "D": "Customers should stop using online banking",
+          "E": "Technology has made banking more expensive"
+        },
+        "section": "Section 1 — Reading Comprehension",
+        "directions": "Directions Read the passage carefully and answer Q1–5. Digital banking has transformed the way people access financial services. Customers can now transfer money, pay bills and even apply for loans without visiting a branch. However, greater convenience has also created new risks. Fraudsters frequently use misleading messages and fake websites to obtain confidential information. Banks continue to improve their security systems, but customers also have an important role to play. They should avoid clicking on suspicious links, use strong passwords and verify unexpected requests before responding. Thus, technology can make banking more convenient, but responsible behaviour remains essential.",
+        "questionType": "reading_comprehension",
+        "questionTypeLabel": "Reading Comprehension",
+        "typeData": {
+          "passage": "Directions Read the passage carefully and answer Q1–5. Digital banking has transformed the way people access financial services. Customers can now transfer money, pay bills and even apply for loans without visiting a branch. However, greater convenience has also created new risks. Fraudsters frequently use misleading messages and fake websites to obtain confidential information. Banks continue to improve their security systems, but customers also have an important role to play. They should avoid clicking on suspicious links, use strong passwords and verify unexpected requests before responding. Thus, technology can make banking more convenient, but responsible behaviour remains essential."
+        }
+      },
+      {
+        "questionNumber": 2,
+        "questionText": "According to the passage, fraudsters try to obtain confidential information through:",
+        "options": {
+          "A": "Bank branches",
+          "B": "Strong passwords",
+          "C": "Fake websites and misleading messages",
+          "D": "Loan applications",
+          "E": "Official bank representatives"
+        },
+        "section": "Section 1 — Reading Comprehension",
+        "directions": "Directions Read the passage carefully and answer Q1–5. Digital banking has transformed the way people access financial services. Customers can now transfer money, pay bills and even apply for loans without visiting a branch. However, greater convenience has also created new risks. Fraudsters frequently use misleading messages and fake websites to obtain confidential information. Banks continue to improve their security systems, but customers also have an important role to play. They should avoid clicking on suspicious links, use strong passwords and verify unexpected requests before responding. Thus, technology can make banking more convenient, but responsible behaviour remains essential.",
+        "questionType": "reading_comprehension",
+        "questionTypeLabel": "Reading Comprehension",
+        "typeData": {
+          "passage": "Directions Read the passage carefully and answer Q1–5. Digital banking has transformed the way people access financial services. Customers can now transfer money, pay bills and even apply for loans without visiting a branch. However, greater convenience has also created new risks. Fraudsters frequently use misleading messages and fake websites to obtain confidential information. Banks continue to improve their security systems, but customers also have an important role to play. They should avoid clicking on suspicious links, use strong passwords and verify unexpected requests before responding. Thus, technology can make banking more convenient, but responsible behaviour remains essential."
+        }
+      },
+      {
+        "questionNumber": 3,
+        "questionText": "Which of the following is NOT suggested as a precaution?",
+        "options": {
+          "A": "Avoid suspicious links",
+          "B": "Use strong passwords",
+          "C": "Verify unexpected requests",
+          "D": "Share confidential information with unknown persons",
+          "E": "Be cautious while responding to messages"
+        },
+        "section": "Section 1 — Reading Comprehension",
+        "directions": "Directions Read the passage carefully and answer Q1–5. Digital banking has transformed the way people access financial services. Customers can now transfer money, pay bills and even apply for loans without visiting a branch. However, greater convenience has also created new risks. Fraudsters frequently use misleading messages and fake websites to obtain confidential information. Banks continue to improve their security systems, but customers also have an important role to play. They should avoid clicking on suspicious links, use strong passwords and verify unexpected requests before responding. Thus, technology can make banking more convenient, but responsible behaviour remains essential.",
+        "questionType": "reading_comprehension",
+        "questionTypeLabel": "Reading Comprehension",
+        "typeData": {
+          "passage": "Directions Read the passage carefully and answer Q1–5. Digital banking has transformed the way people access financial services. Customers can now transfer money, pay bills and even apply for loans without visiting a branch. However, greater convenience has also created new risks. Fraudsters frequently use misleading messages and fake websites to obtain confidential information. Banks continue to improve their security systems, but customers also have an important role to play. They should avoid clicking on suspicious links, use strong passwords and verify unexpected requests before responding. Thus, technology can make banking more convenient, but responsible behaviour remains essential."
+        }
+      },
+      {
+        "questionNumber": 4,
+        "questionText": "The word “confidential” most nearly means:",
+        "options": {
+          "A": "Public",
+          "B": "Secret/private",
+          "C": "Ordinary",
+          "D": "Temporary",
+          "E": "Unimportant"
+        },
+        "section": "Section 1 — Reading Comprehension",
+        "directions": "Directions Read the passage carefully and answer Q1–5. Digital banking has transformed the way people access financial services. Customers can now transfer money, pay bills and even apply for loans without visiting a branch. However, greater convenience has also created new risks. Fraudsters frequently use misleading messages and fake websites to obtain confidential information. Banks continue to improve their security systems, but customers also have an important role to play. They should avoid clicking on suspicious links, use strong passwords and verify unexpected requests before responding. Thus, technology can make banking more convenient, but responsible behaviour remains essential.",
+        "questionType": "vocabulary",
+        "questionTypeLabel": "Vocabulary & Usage",
+        "typeData": {
+          "prompt": "The word “confidential” most nearly means:"
+        }
+      },
+      {
+        "questionNumber": 5,
+        "questionText": "What can be inferred from the passage?",
+        "options": {
+          "A": "Technology alone can eliminate banking fraud",
+          "B": "Customers have no role in online security",
+          "C": "Security requires both technological protection and careful customer behaviour",
+          "D": "Digital banking is more dangerous than traditional banking in every respect",
+          "E": "Banks do not invest in security"
+        },
+        "section": "Section 1 — Reading Comprehension",
+        "directions": "Directions Read the passage carefully and answer Q1–5. Digital banking has transformed the way people access financial services. Customers can now transfer money, pay bills and even apply for loans without visiting a branch. However, greater convenience has also created new risks. Fraudsters frequently use misleading messages and fake websites to obtain confidential information. Banks continue to improve their security systems, but customers also have an important role to play. They should avoid clicking on suspicious links, use strong passwords and verify unexpected requests before responding. Thus, technology can make banking more convenient, but responsible behaviour remains essential.",
+        "questionType": "reading_comprehension",
+        "questionTypeLabel": "Reading Comprehension",
+        "typeData": {
+          "passage": "Directions Read the passage carefully and answer Q1–5. Digital banking has transformed the way people access financial services. Customers can now transfer money, pay bills and even apply for loans without visiting a branch. However, greater convenience has also created new risks. Fraudsters frequently use misleading messages and fake websites to obtain confidential information. Banks continue to improve their security systems, but customers also have an important role to play. They should avoid clicking on suspicious links, use strong passwords and verify unexpected requests before responding. Thus, technology can make banking more convenient, but responsible behaviour remains essential."
+        }
+      },
+      {
+        "questionNumber": 6,
+        "questionText": "Choose the most suitable word for blank 6.",
+        "options": {
+          "A": "destroy",
+          "B": "build",
+          "C": "cancel",
+          "D": "remove",
+          "E": "reject"
+        },
+        "section": "Section 2 — Cloze Test",
+        "directions": "Directions Choose the most suitable word for each blank. Financial planning is important for achieving long-term stability. A person who plans his finances carefully is better prepared to deal with unexpected expenses. Regular saving can help individuals (6) an emergency fund, while suitable investments can help their money (7) over time. However, investment decisions should not be based solely on the possibility of high returns. Investors must also (8) the level of risk involved. A balanced approach can help people (9) their financial goals without taking unnecessary risks. Therefore, financial awareness should be (10) an essential part of everyone's life.",
+        "questionType": "cloze_test",
+        "questionTypeLabel": "Cloze Test",
+        "typeData": {
+          "blankNumber": 6,
+          "passage": "Financial planning is important for achieving long-term stability. A person who plans his finances carefully is better prepared to deal with unexpected expenses. Regular saving can help individuals (6) an emergency fund, while suitable investments can help their money (7) over time. However, investment decisions should not be based solely on the possibility of high returns. Investors must also (8) the level of risk involved. A balanced approach can help people (9) their financial goals without taking unnecessary risks. Therefore, financial awareness should be (10) an essential part of everyone's life."
+        }
+      },
+      {
+        "questionNumber": 7,
+        "questionText": "Choose the most suitable word for blank 7.",
+        "options": {
+          "A": "grow",
+          "B": "disappear",
+          "C": "reduce",
+          "D": "refuse",
+          "E": "hesitate"
+        },
+        "section": "Section 2 — Cloze Test",
+        "directions": "Directions Choose the most suitable word for each blank. Financial planning is important for achieving long-term stability. A person who plans his finances carefully is better prepared to deal with unexpected expenses. Regular saving can help individuals (6) an emergency fund, while suitable investments can help their money (7) over time. However, investment decisions should not be based solely on the possibility of high returns. Investors must also (8) the level of risk involved. A balanced approach can help people (9) their financial goals without taking unnecessary risks. Therefore, financial awareness should be (10) an essential part of everyone's life.",
+        "questionType": "cloze_test",
+        "questionTypeLabel": "Cloze Test",
+        "typeData": {
+          "blankNumber": 7,
+          "passage": "Financial planning is important for achieving long-term stability. A person who plans his finances carefully is better prepared to deal with unexpected expenses. Regular saving can help individuals (6) an emergency fund, while suitable investments can help their money (7) over time. However, investment decisions should not be based solely on the possibility of high returns. Investors must also (8) the level of risk involved. A balanced approach can help people (9) their financial goals without taking unnecessary risks. Therefore, financial awareness should be (10) an essential part of everyone's life."
+        }
+      },
+      {
+        "questionNumber": 8,
+        "questionText": "Choose the most suitable word for blank 8.",
+        "options": {
+          "A": "ignore",
+          "B": "consider",
+          "C": "oppose",
+          "D": "remove",
+          "E": "conceal"
+        },
+        "section": "Section 2 — Cloze Test",
+        "directions": "Directions Choose the most suitable word for each blank. Financial planning is important for achieving long-term stability. A person who plans his finances carefully is better prepared to deal with unexpected expenses. Regular saving can help individuals (6) an emergency fund, while suitable investments can help their money (7) over time. However, investment decisions should not be based solely on the possibility of high returns. Investors must also (8) the level of risk involved. A balanced approach can help people (9) their financial goals without taking unnecessary risks. Therefore, financial awareness should be (10) an essential part of everyone's life.",
+        "questionType": "cloze_test",
+        "questionTypeLabel": "Cloze Test",
+        "typeData": {
+          "blankNumber": 8,
+          "passage": "Financial planning is important for achieving long-term stability. A person who plans his finances carefully is better prepared to deal with unexpected expenses. Regular saving can help individuals (6) an emergency fund, while suitable investments can help their money (7) over time. However, investment decisions should not be based solely on the possibility of high returns. Investors must also (8) the level of risk involved. A balanced approach can help people (9) their financial goals without taking unnecessary risks. Therefore, financial awareness should be (10) an essential part of everyone's life."
+        }
+      },
+      {
+        "questionNumber": 9,
+        "questionText": "Choose the most suitable word for blank 9.",
+        "options": {
+          "A": "achieve",
+          "B": "prevent",
+          "C": "abandon",
+          "D": "delay",
+          "E": "disturb"
+        },
+        "section": "Section 2 — Cloze Test",
+        "directions": "Directions Choose the most suitable word for each blank. Financial planning is important for achieving long-term stability. A person who plans his finances carefully is better prepared to deal with unexpected expenses. Regular saving can help individuals (6) an emergency fund, while suitable investments can help their money (7) over time. However, investment decisions should not be based solely on the possibility of high returns. Investors must also (8) the level of risk involved. A balanced approach can help people (9) their financial goals without taking unnecessary risks. Therefore, financial awareness should be (10) an essential part of everyone's life.",
+        "questionType": "cloze_test",
+        "questionTypeLabel": "Cloze Test",
+        "typeData": {
+          "blankNumber": 9,
+          "passage": "Financial planning is important for achieving long-term stability. A person who plans his finances carefully is better prepared to deal with unexpected expenses. Regular saving can help individuals (6) an emergency fund, while suitable investments can help their money (7) over time. However, investment decisions should not be based solely on the possibility of high returns. Investors must also (8) the level of risk involved. A balanced approach can help people (9) their financial goals without taking unnecessary risks. Therefore, financial awareness should be (10) an essential part of everyone's life."
+        }
+      },
+      {
+        "questionNumber": 10,
+        "questionText": "Choose the most suitable word for blank 10.",
+        "options": {
+          "A": "considered",
+          "B": "rejected",
+          "C": "avoided",
+          "D": "hidden",
+          "E": "forgotten"
+        },
+        "section": "Section 2 — Cloze Test",
+        "directions": "Directions Choose the most suitable word for each blank. Financial planning is important for achieving long-term stability. A person who plans his finances carefully is better prepared to deal with unexpected expenses. Regular saving can help individuals (6) an emergency fund, while suitable investments can help their money (7) over time. However, investment decisions should not be based solely on the possibility of high returns. Investors must also (8) the level of risk involved. A balanced approach can help people (9) their financial goals without taking unnecessary risks. Therefore, financial awareness should be (10) an essential part of everyone's life.",
+        "questionType": "cloze_test",
+        "questionTypeLabel": "Cloze Test",
+        "typeData": {
+          "blankNumber": 10,
+          "passage": "Financial planning is important for achieving long-term stability. A person who plans his finances carefully is better prepared to deal with unexpected expenses. Regular saving can help individuals (6) an emergency fund, while suitable investments can help their money (7) over time. However, investment decisions should not be based solely on the possibility of high returns. Investors must also (8) the level of risk involved. A balanced approach can help people (9) their financial goals without taking unnecessary risks. Therefore, financial awareness should be (10) an essential part of everyone's life."
+        }
+      },
+      {
+        "questionNumber": 11,
+        "questionText": "The manager / along with his assistants / have approved the proposal / for the new branch.",
+        "options": {
+          "A": "The manager",
+          "B": "along with his assistants",
+          "C": "have approved the proposal",
+          "D": "for the new branch",
+          "E": "No error"
+        },
+        "section": "Section 3 — Error Detection",
+        "directions": "Directions Identify the part containing an error.",
+        "questionType": "error_detection",
+        "questionTypeLabel": "Error Detection",
+        "typeData": {
+          "segments": [
+            "The manager",
+            "along with his assistants",
+            "have approved the proposal",
+            "for the new branch."
+          ]
+        }
+      },
+      {
+        "questionNumber": 12,
+        "questionText": "Neither the employees nor the manager / were willing to accept / the revised schedule / without further discussion.",
+        "options": {
+          "A": "Neither the employees nor the manager",
+          "B": "were willing to accept",
+          "C": "the revised schedule",
+          "D": "without further discussion",
+          "E": "No error"
+        },
+        "section": "Section 3 — Error Detection",
+        "directions": "Directions Identify the part containing an error.",
+        "questionType": "error_detection",
+        "questionTypeLabel": "Error Detection",
+        "typeData": {
+          "segments": [
+            "Neither the employees nor the manager",
+            "were willing to accept",
+            "the revised schedule",
+            "without further discussion."
+          ]
+        }
+      },
+      {
+        "questionNumber": 13,
+        "questionText": "The committee has discussed / the issue in detail / and decided to postpone / the meeting until Monday.",
+        "options": {
+          "A": "The committee has discussed",
+          "B": "the issue in detail",
+          "C": "and decided to postpone",
+          "D": "the meeting until Monday",
+          "E": "No error"
+        },
+        "section": "Section 3 — Error Detection",
+        "directions": "Directions Identify the part containing an error.",
+        "questionType": "error_detection",
+        "questionTypeLabel": "Error Detection",
+        "typeData": {
+          "segments": [
+            "The committee has discussed",
+            "the issue in detail",
+            "and decided to postpone",
+            "the meeting until Monday."
+          ]
+        }
+      },
+      {
+        "questionNumber": 14,
+        "questionText": "She is one of those candidates / who has consistently performed / well in difficult situations / during the recruitment process.",
+        "options": {
+          "A": "She is one of those candidates",
+          "B": "who has consistently performed",
+          "C": "well in difficult situations",
+          "D": "during the recruitment process",
+          "E": "No error"
+        },
+        "section": "Section 3 — Error Detection",
+        "directions": "Directions Identify the part containing an error.",
+        "questionType": "error_detection",
+        "questionTypeLabel": "Error Detection",
+        "typeData": {
+          "segments": [
+            "She is one of those candidates",
+            "who has consistently performed",
+            "well in difficult situations",
+            "during the recruitment process."
+          ]
+        }
+      },
+      {
+        "questionNumber": 15,
+        "questionText": "The information provided by the officials / were not sufficient / to resolve the issue / immediately.",
+        "options": {
+          "A": "The information provided by the officials",
+          "B": "were not sufficient",
+          "C": "to resolve the issue",
+          "D": "immediately",
+          "E": "No error"
+        },
+        "section": "Section 3 — Error Detection",
+        "directions": "Directions Identify the part containing an error.",
+        "questionType": "error_detection",
+        "questionTypeLabel": "Error Detection",
+        "typeData": {
+          "segments": [
+            "The information provided by the officials",
+            "were not sufficient",
+            "to resolve the issue",
+            "immediately."
+          ]
+        }
+      },
+      {
+        "questionNumber": 16,
+        "questionText": "The bank introduced a new system to ______ the process of loan approval.",
+        "options": {
+          "A": "simplify",
+          "B": "scatter",
+          "C": "weaken",
+          "D": "conceal",
+          "E": "interrupt"
+        },
+        "section": "Section 4 — Fillers",
+        "questionType": "fillers",
+        "questionTypeLabel": "Fillers",
+        "typeData": {
+          "sentence": "The bank introduced a new system to ______ the process of loan approval."
+        }
+      },
+      {
+        "questionNumber": 17,
+        "questionText": "Despite several challenges, the company managed to ______ its position in the market.",
+        "options": {
+          "A": "strengthen",
+          "B": "dissolve",
+          "C": "neglect",
+          "D": "hesitate",
+          "E": "withdraw"
+        },
+        "section": "Section 4 — Fillers",
+        "questionType": "fillers",
+        "questionTypeLabel": "Fillers",
+        "typeData": {
+          "sentence": "Despite several challenges, the company managed to ______ its position in the market."
+        }
+      },
+      {
+        "questionNumber": 18,
+        "questionText": "The report provides a ______ analysis of the reasons behind the decline in sales.",
+        "options": {
+          "A": "superficial",
+          "B": "comprehensive",
+          "C": "accidental",
+          "D": "temporary",
+          "E": "reluctant"
+        },
+        "section": "Section 4 — Fillers",
+        "questionType": "fillers",
+        "questionTypeLabel": "Fillers",
+        "typeData": {
+          "sentence": "The report provides a ______ analysis of the reasons behind the decline in sales."
+        }
+      },
+      {
+        "questionNumber": 19,
+        "questionText": "Employees were advised to ______ the instructions carefully before submitting the form.",
+        "options": {
+          "A": "overlook",
+          "B": "follow",
+          "C": "oppose",
+          "D": "distort",
+          "E": "abandon"
+        },
+        "section": "Section 4 — Fillers",
+        "questionType": "fillers",
+        "questionTypeLabel": "Fillers",
+        "typeData": {
+          "sentence": "Employees were advised to ______ the instructions carefully before submitting the form."
+        }
+      },
+      {
+        "questionNumber": 20,
+        "questionText": "The sudden increase in demand has ______ pressure on the supply chain.",
+        "options": {
+          "A": "placed",
+          "B": "erased",
+          "C": "hidden",
+          "D": "prevented",
+          "E": "escaped"
+        },
+        "section": "Section 4 — Fillers",
+        "questionType": "fillers",
+        "questionTypeLabel": "Fillers",
+        "typeData": {
+          "sentence": "The sudden increase in demand has ______ pressure on the supply chain."
+        }
+      },
+      {
+        "questionNumber": 21,
+        "questionText": "The new policy is beneficial for both employees as well as customers .",
+        "options": {
+          "A": "is beneficial for both employees as well as customers",
+          "B": "is beneficial to both employees and customers",
+          "C": "is beneficial for both employees and also customers",
+          "D": "is beneficial both employees and customers",
+          "E": "No improvement"
+        },
+        "section": "Section 5 — Phrase Replacement",
+        "questionType": "phrase_replacement",
+        "questionTypeLabel": "Phrase Replacement",
+        "typeData": {
+          "fullText": "The new policy is beneficial for both employees as well as customers ."
+        }
+      },
+      {
+        "questionNumber": 22,
+        "questionText": "The officer insisted to submit the documents before the deadline.",
+        "options": {
+          "A": "insisted submitting",
+          "B": "insisted on submitting",
+          "C": "insisted for submit",
+          "D": "insisted to submitting",
+          "E": "No improvement"
+        },
+        "section": "Section 5 — Phrase Replacement",
+        "questionType": "phrase_replacement",
+        "questionTypeLabel": "Phrase Replacement",
+        "typeData": {
+          "fullText": "The officer insisted to submit the documents before the deadline."
+        }
+      },
+      {
+        "questionNumber": 23,
+        "questionText": "The number of applicants have increased significantly this year.",
+        "options": {
+          "A": "have increased significantly",
+          "B": "has increased significantly",
+          "C": "are increased significantly",
+          "D": "were increased significantly",
+          "E": "No improvement"
+        },
+        "section": "Section 5 — Phrase Replacement",
+        "questionType": "phrase_replacement",
+        "questionTypeLabel": "Phrase Replacement",
+        "typeData": {
+          "fullText": "The number of applicants have increased significantly this year."
+        }
+      },
+      {
+        "questionNumber": 24,
+        "questionText": "He completed the task despite of several difficulties .",
+        "options": {
+          "A": "despite several difficulties",
+          "B": "despite from several difficulties",
+          "C": "although of several difficulties",
+          "D": "in spite several difficulties",
+          "E": "No improvement"
+        },
+        "section": "Section 5 — Phrase Replacement",
+        "questionType": "phrase_replacement",
+        "questionTypeLabel": "Phrase Replacement",
+        "typeData": {
+          "fullText": "He completed the task despite of several difficulties ."
+        }
+      },
+      {
+        "questionNumber": 25,
+        "questionText": "The manager asked the staff that why the report was delayed .",
+        "options": {
+          "A": "that why the report was delayed",
+          "B": "why was the report delayed",
+          "C": "why the report had been delayed",
+          "D": "why had the report delayed",
+          "E": "No improvement"
+        },
+        "section": "Section 5 — Phrase Replacement",
+        "questionType": "phrase_replacement",
+        "questionTypeLabel": "Phrase Replacement",
+        "typeData": {
+          "fullText": "The manager asked the staff that why the report was delayed ."
+        }
+      },
+      {
+        "questionNumber": 26,
+        "questionText": "Rearrange the following sentences to form a meaningful paragraph. A. This habit also improves concentration. B. Reading regularly has several benefits. C. It expands vocabulary and strengthens comprehension. D. Therefore, students should make reading a part of their daily routine.",
+        "options": {
+          "A": "BCAD",
+          "B": "BACD",
+          "C": "CBAD",
+          "D": "BDCA",
+          "E": "CABD"
+        },
+        "section": "Section 6 — Para Jumble & Vocabulary",
+        "questionType": "para_jumble",
+        "questionTypeLabel": "Para Jumble",
+        "typeData": {
+          "sentences": {
+            "A": "This habit also improves concentration.",
+            "B": "Reading regularly has several benefits.",
+            "C": "It expands vocabulary and strengthens comprehension.",
+            "D": "Therefore, students should make reading a part of their daily routine."
+          }
+        }
+      },
+      {
+        "questionNumber": 27,
+        "questionText": "A. As a result, customers can receive services more quickly. B. Banks are increasingly adopting digital tools. C. These tools automate several routine activities. D. This has reduced the time required for many transactions.",
+        "options": {
+          "A": "BCDA",
+          "B": "BACD",
+          "C": "CBDA",
+          "D": "BDAC",
+          "E": "DCBA"
+        },
+        "section": "Section 6 — Para Jumble & Vocabulary",
+        "questionType": "para_jumble",
+        "questionTypeLabel": "Para Jumble",
+        "typeData": {
+          "sentences": {
+            "A": "As a result, customers can receive services more quickly.",
+            "B": "Banks are increasingly adopting digital tools.",
+            "C": "These tools automate several routine activities.",
+            "D": "This has reduced the time required for many transactions."
+          }
+        }
+      },
+      {
+        "questionNumber": 28,
+        "questionText": "A. However, saving alone may not be enough. B. Inflation can reduce the purchasing power of money over time. C. People should therefore consider suitable investment options. D. Saving is an important part of financial planning.",
+        "options": {
+          "A": "DABC",
+          "B": "DBAC",
+          "C": "ABDC",
+          "D": "DCAB",
+          "E": "BACD"
+        },
+        "section": "Section 6 — Para Jumble & Vocabulary",
+        "questionType": "para_jumble",
+        "questionTypeLabel": "Para Jumble",
+        "typeData": {
+          "sentences": {
+            "A": "However, saving alone may not be enough.",
+            "B": "Inflation can reduce the purchasing power of money over time.",
+            "C": "People should therefore consider suitable investment options.",
+            "D": "Saving is an important part of financial planning."
+          }
+        }
+      },
+      {
+        "questionNumber": 29,
+        "questionText": "Choose the word closest in meaning to “prudent” .",
+        "options": {
+          "A": "Careless",
+          "B": "Wise and cautious",
+          "C": "Expensive",
+          "D": "Immediate",
+          "E": "Doubtful"
+        },
+        "section": "Section 6 — Para Jumble & Vocabulary",
+        "questionType": "vocabulary",
+        "questionTypeLabel": "Vocabulary & Usage",
+        "typeData": {
+          "prompt": "Choose the word closest in meaning to “prudent” ."
+        }
+      },
+      {
+        "questionNumber": 30,
+        "questionText": "Choose the sentence in which “affect” is used correctly.",
+        "options": {
+          "A": "The new rule will affect the efficiency of the process.",
+          "B": "The new rule will effect the efficiency of the process.",
+          "C": "The manager was affect by the decision.",
+          "D": "The policy had an affect on sales, so it was cancelled.",
+          "E": "The employees affect a solution yesterday."
+        },
+        "section": "Section 6 — Para Jumble & Vocabulary",
+        "questionType": "vocabulary",
+        "questionTypeLabel": "Vocabulary & Usage",
+        "typeData": {
+          "prompt": "Choose the sentence in which “affect” is used correctly."
+        }
+      }
+    ],
+    "answerKey": {
+      "1": "B",
+      "2": "C",
+      "3": "D",
+      "4": "B",
+      "5": "C",
+      "6": "B",
+      "7": "A",
+      "8": "B",
+      "9": "A",
+      "10": "A",
+      "11": "C",
+      "12": "B",
+      "13": "E",
+      "14": "B",
+      "15": "B",
+      "16": "A",
+      "17": "A",
+      "18": "B",
+      "19": "B",
+      "20": "A",
+      "21": "B",
+      "22": "B",
+      "23": "B",
+      "24": "A",
+      "25": "C",
+      "26": "A",
+      "27": "A",
+      "28": "A",
+      "29": "B",
+      "30": "A"
+    }
+  }
+]

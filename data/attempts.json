@@ -1,1 +1,485 @@
-[]
+[
+  {
+    "id": "att_mt8rm416_91lf",
+    "examId": "exam_mt8rm40t",
+    "examCode": "Z376FM",
+    "examTitle": "English Language Practice Set 1",
+    "candidateId": null,
+    "candidateName": "Candidate Test 1",
+    "candidateEmail": "candidate1@test.com",
+    "submittedAt": "2026-08-25T14:33:28.554Z",
+    "timeSpentSeconds": 120,
+    "answers": {
+      "1": "A",
+      "2": "B",
+      "3": "C"
+    },
+    "result": {
+      "totalQuestions": 30,
+      "attempted": 0,
+      "correct": 0,
+      "wrong": 0,
+      "unattempted": 30,
+      "score": 0,
+      "maxScore": 30,
+      "accuracy": 0,
+      "attemptRate": 0,
+      "questionResults": [
+        {
+          "questionNumber": 1,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "reading_comprehension",
+          "questionTypeLabel": "Reading Comprehension"
+        },
+        {
+          "questionNumber": 2,
+          "selectedAnswer": null,
+          "correctAnswer": "C",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "reading_comprehension",
+          "questionTypeLabel": "Reading Comprehension"
+        },
+        {
+          "questionNumber": 3,
+          "selectedAnswer": null,
+          "correctAnswer": "D",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "reading_comprehension",
+          "questionTypeLabel": "Reading Comprehension"
+        },
+        {
+          "questionNumber": 4,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "vocabulary",
+          "questionTypeLabel": "Vocabulary & Usage"
+        },
+        {
+          "questionNumber": 5,
+          "selectedAnswer": null,
+          "correctAnswer": "C",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "reading_comprehension",
+          "questionTypeLabel": "Reading Comprehension"
+        },
+        {
+          "questionNumber": 6,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "cloze_test",
+          "questionTypeLabel": "Cloze Test"
+        },
+        {
+          "questionNumber": 7,
+          "selectedAnswer": null,
+          "correctAnswer": "A",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "cloze_test",
+          "questionTypeLabel": "Cloze Test"
+        },
+        {
+          "questionNumber": 8,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "cloze_test",
+          "questionTypeLabel": "Cloze Test"
+        },
+        {
+          "questionNumber": 9,
+          "selectedAnswer": null,
+          "correctAnswer": "A",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "cloze_test",
+          "questionTypeLabel": "Cloze Test"
+        },
+        {
+          "questionNumber": 10,
+          "selectedAnswer": null,
+          "correctAnswer": "A",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "cloze_test",
+          "questionTypeLabel": "Cloze Test"
+        },
+        {
+          "questionNumber": 11,
+          "selectedAnswer": null,
+          "correctAnswer": "C",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "error_detection",
+          "questionTypeLabel": "Error Detection"
+        },
+        {
+          "questionNumber": 12,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "error_detection",
+          "questionTypeLabel": "Error Detection"
+        },
+        {
+          "questionNumber": 13,
+          "selectedAnswer": null,
+          "correctAnswer": "E",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "error_detection",
+          "questionTypeLabel": "Error Detection"
+        },
+        {
+          "questionNumber": 14,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "error_detection",
+          "questionTypeLabel": "Error Detection"
+        },
+        {
+          "questionNumber": 15,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "error_detection",
+          "questionTypeLabel": "Error Detection"
+        },
+        {
+          "questionNumber": 16,
+          "selectedAnswer": null,
+          "correctAnswer": "A",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "fillers",
+          "questionTypeLabel": "Fillers"
+        },
+        {
+          "questionNumber": 17,
+          "selectedAnswer": null,
+          "correctAnswer": "A",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "fillers",
+          "questionTypeLabel": "Fillers"
+        },
+        {
+          "questionNumber": 18,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "fillers",
+          "questionTypeLabel": "Fillers"
+        },
+        {
+          "questionNumber": 19,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "fillers",
+          "questionTypeLabel": "Fillers"
+        },
+        {
+          "questionNumber": 20,
+          "selectedAnswer": null,
+          "correctAnswer": "A",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "fillers",
+          "questionTypeLabel": "Fillers"
+        },
+        {
+          "questionNumber": 21,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "phrase_replacement",
+          "questionTypeLabel": "Phrase Replacement"
+        },
+        {
+          "questionNumber": 22,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "phrase_replacement",
+          "questionTypeLabel": "Phrase Replacement"
+        },
+        {
+          "questionNumber": 23,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "phrase_replacement",
+          "questionTypeLabel": "Phrase Replacement"
+        },
+        {
+          "questionNumber": 24,
+          "selectedAnswer": null,
+          "correctAnswer": "A",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "phrase_replacement",
+          "questionTypeLabel": "Phrase Replacement"
+        },
+        {
+          "questionNumber": 25,
+          "selectedAnswer": null,
+          "correctAnswer": "C",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "phrase_replacement",
+          "questionTypeLabel": "Phrase Replacement"
+        },
+        {
+          "questionNumber": 26,
+          "selectedAnswer": null,
+          "correctAnswer": "A",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "para_jumble",
+          "questionTypeLabel": "Para Jumble"
+        },
+        {
+          "questionNumber": 27,
+          "selectedAnswer": null,
+          "correctAnswer": "A",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "para_jumble",
+          "questionTypeLabel": "Para Jumble"
+        },
+        {
+          "questionNumber": 28,
+          "selectedAnswer": null,
+          "correctAnswer": "A",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "para_jumble",
+          "questionTypeLabel": "Para Jumble"
+        },
+        {
+          "questionNumber": 29,
+          "selectedAnswer": null,
+          "correctAnswer": "B",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "vocabulary",
+          "questionTypeLabel": "Vocabulary & Usage"
+        },
+        {
+          "questionNumber": 30,
+          "selectedAnswer": null,
+          "correctAnswer": "A",
+          "status": "unattempted",
+          "timeSpent": 0,
+          "marksObtained": 0,
+          "questionType": "vocabulary",
+          "questionTypeLabel": "Vocabulary & Usage"
+        }
+      ],
+      "sectionResults": [
+        {
+          "sectionName": "Section 1 — Reading Comprehension",
+          "total": 5,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 5,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        },
+        {
+          "sectionName": "Section 2 — Cloze Test",
+          "total": 5,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 5,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        },
+        {
+          "sectionName": "Section 3 — Error Detection",
+          "total": 5,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 5,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        },
+        {
+          "sectionName": "Section 4 — Fillers",
+          "total": 5,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 5,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        },
+        {
+          "sectionName": "Section 5 — Phrase Replacement",
+          "total": 5,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 5,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        },
+        {
+          "sectionName": "Section 6 — Para Jumble & Vocabulary",
+          "total": 5,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 5,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        }
+      ],
+      "typeResults": [
+        {
+          "type": "reading_comprehension",
+          "label": "Reading Comprehension",
+          "total": 4,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 4,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        },
+        {
+          "type": "vocabulary",
+          "label": "Vocabulary & Usage",
+          "total": 3,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 3,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        },
+        {
+          "type": "cloze_test",
+          "label": "Cloze Test",
+          "total": 5,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 5,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        },
+        {
+          "type": "error_detection",
+          "label": "Error Detection",
+          "total": 5,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 5,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        },
+        {
+          "type": "fillers",
+          "label": "Fillers",
+          "total": 5,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 5,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        },
+        {
+          "type": "phrase_replacement",
+          "label": "Phrase Replacement",
+          "total": 5,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 5,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        },
+        {
+          "type": "para_jumble",
+          "label": "Para Jumble",
+          "total": 3,
+          "attempted": 0,
+          "correct": 0,
+          "wrong": 0,
+          "unattempted": 3,
+          "time": 0,
+          "accuracy": 0,
+          "averageTime": 0
+        }
+      ]
+    }
+  }
+]

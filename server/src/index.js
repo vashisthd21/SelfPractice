@@ -24,61 +24,24 @@ const upload = multer({
   fileFilter: (r, f, cb) => cb(null, f.mimetype === 'application/pdf' || f.originalname.toLowerCase().endsWith('.pdf'))
 });
 
-// Storage initialization (Vercel serverless safe)
-const dataDir = process.env.VERCEL ? '/tmp' : path.resolve('data');
-try {
-  fs.mkdirSync(dataDir, { recursive: true });
-} catch (e) {}
+import {
+  connectDB,
+  getAllUsers,
+  findUserByEmail,
+  findUserById,
+  saveUser,
+  getAllExams,
+  findExamByCode,
+  saveExam,
+  getAllAttempts,
+  getAttemptsByExam,
+  getAttemptsByUser,
+  findAttemptById,
+  saveAttempt
+} from './db.js';
 
-const usersFile = path.join(dataDir, 'users.json');
-const examsFile = path.join(dataDir, 'exams.json');
-const attemptsFile = path.join(dataDir, 'attempts.json');
-
-let inMemoryUsers = [];
-let inMemoryExams = [];
-let inMemoryAttempts = [];
-
-const readUsers = () => {
-  try {
-    if (fs.existsSync(usersFile)) return JSON.parse(fs.readFileSync(usersFile, 'utf8'));
-  } catch (e) {}
-  return inMemoryUsers;
-};
-
-const writeUsers = (x) => {
-  inMemoryUsers = x;
-  try {
-    fs.writeFileSync(usersFile, JSON.stringify(x, null, 2));
-  } catch (e) {}
-};
-
-const readExams = () => {
-  try {
-    if (fs.existsSync(examsFile)) return JSON.parse(fs.readFileSync(examsFile, 'utf8'));
-  } catch (e) {}
-  return inMemoryExams;
-};
-
-const writeExams = (x) => {
-  inMemoryExams = x;
-  try {
-    fs.writeFileSync(examsFile, JSON.stringify(x, null, 2));
-  } catch (e) {}
-};
-
-const readAttempts = () => {
-  try {
-    if (fs.existsSync(attemptsFile)) return JSON.parse(fs.readFileSync(attemptsFile, 'utf8'));
-  } catch (e) {}
-  return inMemoryAttempts;
-};
-
-const writeAttempts = (x) => {
-  inMemoryAttempts = x;
-  try {
-    fs.writeFileSync(attemptsFile, JSON.stringify(x, null, 2));
-  } catch (e) {}
-};
+// Initialize Database connection
+connectDB().catch((err) => console.warn('DB init notice:', err.message));
 
 // -------------------------------------------------------------
 // AUTH & CRYPTO HELPERS (Pure Node.js Crypto)
@@ -812,7 +775,7 @@ function evaluate(exam, answers, key) {
     attemptRate: total ? (attempted / total) * 100 : 0,
     questionResults: results,
     sectionResults,
-    typeResults
+      typeResults
   };
 }
 
@@ -820,7 +783,7 @@ function evaluate(exam, answers, key) {
 // AUTHENTICATION ROUTES
 // -------------------------------------------------------------
 
-app.post('/api/auth/signup', (req, res) => {
+app.post('/api/auth/signup', async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password) {
@@ -828,9 +791,9 @@ app.post('/api/auth/signup', (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const allUsers = readUsers();
+    const existingUser = await findUserByEmail(cleanEmail);
 
-    if (allUsers.some((u) => u.email === cleanEmail)) {
+    if (existingUser) {
       return res.status(400).json({ message: 'An account with this email already exists. Please log in.' });
     }
 
@@ -842,13 +805,12 @@ app.post('/api/auth/signup', (req, res) => {
       name: clean(name),
       email: cleanEmail,
       role: role === 'teacher' ? 'teacher' : 'student',
-      hash,
-      salt,
+      passwordHash: hash,
+      passwordSalt: salt,
       createdAt: new Date().toISOString()
     };
 
-    allUsers.unshift(newUser);
-    writeUsers(allUsers);
+    await saveUser(newUser);
 
     const token = createToken({
       id: newUser.id,
@@ -874,7 +836,7 @@ app.post('/api/auth/signup', (req, res) => {
   }
 });
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -882,10 +844,9 @@ app.post('/api/auth/login', (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const allUsers = readUsers();
-    const user = allUsers.find((u) => u.email === cleanEmail);
+    const user = await findUserByEmail(cleanEmail);
 
-    if (!user || !verifyPassword(password, user.hash, user.salt)) {
+    if (!user || !verifyPassword(password, user.passwordHash || user.hash, user.passwordSalt || user.salt)) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
@@ -913,12 +874,11 @@ app.post('/api/auth/login', (req, res) => {
   }
 });
 
-app.get('/api/auth/me', (req, res) => {
+app.get('/api/auth/me', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ message: 'Not authenticated' });
   }
-  const allUsers = readUsers();
-  const user = allUsers.find((u) => u.id === req.user.id);
+  const user = await findUserById(req.user.id);
   if (!user) {
     return res.json({ user: req.user });
   }
@@ -975,7 +935,7 @@ app.post('/api/parse/answer-key', upload.single('file'), async (req, res) => {
 });
 
 // Create & Host an Exam (Creator Flow)
-app.post('/api/exams/create', (req, res) => {
+app.post('/api/exams/create', async (req, res) => {
   try {
     const { title, creatorName, config, questions, answerKey } = req.body;
     if (!questions || !questions.length) {
@@ -985,10 +945,11 @@ app.post('/api/exams/create', (req, res) => {
       return res.status(400).json({ message: 'Answer key is required to create and host an exam' });
     }
 
-    const allExams = readExams();
     let code = generateExamCode();
-    while (allExams.some((e) => e.code === code)) {
+    let existing = await findExamByCode(code);
+    while (existing) {
       code = generateExamCode();
+      existing = await findExamByCode(code);
     }
 
     const adminKey = `adm_${crypto.randomBytes(12).toString('hex')}`;
@@ -1013,8 +974,7 @@ app.post('/api/exams/create', (req, res) => {
       answerKey
     };
 
-    allExams.unshift(examRecord);
-    writeExams(allExams);
+    await saveExam(examRecord);
 
     res.json({
       success: true,
@@ -1037,10 +997,9 @@ app.post('/api/exams/create', (req, res) => {
 });
 
 // Candidate Fetch Exam (Stripping answerKey)
-app.get('/api/exams/:code', (req, res) => {
+app.get('/api/exams/:code', async (req, res) => {
   const code = req.params.code.trim().toUpperCase();
-  const allExams = readExams();
-  const exam = allExams.find((e) => e.code === code || e.id === req.params.code);
+  const exam = await findExamByCode(code);
 
   if (!exam) {
     return res.status(404).json({ message: `No exam found for code "${code}". Please check the code and try again.` });
@@ -1059,12 +1018,11 @@ app.get('/api/exams/:code', (req, res) => {
 });
 
 // Candidate Submission & Scoring
-app.post('/api/exams/:code/submit', (req, res) => {
+app.post('/api/exams/:code/submit', async (req, res) => {
   try {
     const code = req.params.code.trim().toUpperCase();
     const { candidateName, candidateEmail, answers, timeSpentSeconds } = req.body;
-    const allExams = readExams();
-    const exam = allExams.find((e) => e.code === code || e.id === req.params.code);
+    const exam = await findExamByCode(code);
 
     if (!exam) {
       return res.status(404).json({ message: 'Exam not found' });
@@ -1087,9 +1045,7 @@ app.post('/api/exams/:code/submit', (req, res) => {
       result
     };
 
-    const allAttempts = readAttempts();
-    allAttempts.unshift(attempt);
-    writeAttempts(allAttempts);
+    await saveAttempt(attempt);
 
     res.json({
       success: true,
@@ -1112,11 +1068,10 @@ app.post('/api/exams/:code/submit', (req, res) => {
 });
 
 // Creator Analytics & Leaderboard (Restricted to Exam Creator)
-app.get('/api/exams/:code/analytics', (req, res) => {
+app.get('/api/exams/:code/analytics', async (req, res) => {
   try {
     const code = req.params.code.trim().toUpperCase();
-    const allExams = readExams();
-    const exam = allExams.find((e) => e.code === code || e.id === req.params.code);
+    const exam = await findExamByCode(code);
 
     if (!exam) {
       return res.status(404).json({ message: 'Exam not found' });
@@ -1134,8 +1089,7 @@ app.get('/api/exams/:code/analytics', (req, res) => {
       });
     }
 
-    const allAttempts = readAttempts();
-    const examAttempts = allAttempts.filter((a) => a.examCode === exam.code || a.examId === exam.id);
+    const examAttempts = await getAttemptsByExam(exam.code);
 
     const leaderboard = examAttempts
       .map((a) => ({
@@ -1226,12 +1180,11 @@ app.get('/api/exams/:code/analytics', (req, res) => {
 });
 
 // Candidate Attempt History (Authenticated User)
-app.get('/api/attempts/my-attempts', (req, res) => {
+app.get('/api/attempts/my-attempts', async (req, res) => {
   if (!req.user) return res.status(401).json({ message: 'Please log in to view your attempt history' });
-  const allAttempts = readAttempts();
-  const myAttempts = allAttempts
-    .filter((a) => a.candidateId === req.user.id || (a.candidateEmail && a.candidateEmail.toLowerCase() === req.user.email.toLowerCase()))
-    .map((a) => ({
+  const myAttempts = await getAttemptsByUser(req.user.id, req.user.email);
+  res.json(
+    myAttempts.map((a) => ({
       id: a.id,
       examId: a.examId,
       examCode: a.examCode,
@@ -1243,15 +1196,14 @@ app.get('/api/attempts/my-attempts', (req, res) => {
       totalQuestions: a.result.totalQuestions,
       submittedAt: a.submittedAt,
       timeSpentSeconds: a.timeSpentSeconds
-    }));
-
-  res.json(myAttempts);
+    }))
+  );
 });
 
 // Creator Hosted Exams List (Authenticated User)
-app.get('/api/exams/my-created', (req, res) => {
-  const allExams = readExams();
-  const allAttempts = readAttempts();
+app.get('/api/exams/my-created', async (req, res) => {
+  const allExams = await getAllExams();
+  const allAttempts = await getAllAttempts();
 
   let userExams = allExams;
   if (req.user) {
@@ -1273,9 +1225,9 @@ app.get('/api/exams/my-created', (req, res) => {
 });
 
 // Public / All Exams List
-app.get('/api/exams', (req, res) => {
-  const allExams = readExams();
-  const allAttempts = readAttempts();
+app.get('/api/exams', async (req, res) => {
+  const allExams = await getAllExams();
+  const allAttempts = await getAllAttempts();
 
   res.json(
     allExams.map((e) => ({
@@ -1292,13 +1244,11 @@ app.get('/api/exams', (req, res) => {
 });
 
 // Specific Attempt Details
-app.get('/api/attempts/:attemptId', (req, res) => {
-  const allAttempts = readAttempts();
-  const attempt = allAttempts.find((a) => a.id === req.params.attemptId);
+app.get('/api/attempts/:attemptId', async (req, res) => {
+  const attempt = await findAttemptById(req.params.attemptId);
   if (!attempt) return res.status(404).json({ message: 'Attempt record not found' });
 
-  const allExams = readExams();
-  const exam = allExams.find((e) => e.code === attempt.examCode || e.id === attempt.examId);
+  const exam = await findExamByCode(attempt.examCode || attempt.examId);
 
   res.json({
     attempt,
