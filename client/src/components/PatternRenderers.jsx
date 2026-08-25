@@ -233,13 +233,16 @@ export function ReadingCompView({ question, selectedOption, onSelectOption }) {
 
 // 2. Cloze Test View with dynamic live blank insertion
 export function ClozeTestView({ question, selectedOption, onSelectOption }) {
-  const passage = question.passage || '';
+  const rawPassage = question.typeData?.passage || question.passage || question.directions || '';
+  const passage = rawPassage
+    .replace(/^Directions?\s*(?:\([^)]*\))?\s*:?\s*(?:Choose the most suitable word for each blank\.?)?/i, '')
+    .trim();
   const currentBlank = question.typeData?.blankNumber || question.questionNumber;
   const chosenWord = selectedOption && question.options[selectedOption] ? question.options[selectedOption] : null;
 
   const renderClozePassage = () => {
     if (!passage) return null;
-    const regex = /\((\s*\d{1,3}\s*)\)|_{3,}/g;
+    const regex = /\(\s*(\d{1,3})\s*\)|_{3,}/g;
     const parts = [];
     let lastIndex = 0;
     let match;

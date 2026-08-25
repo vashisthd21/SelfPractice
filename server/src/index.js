@@ -288,14 +288,18 @@ function classifyQuestion(q, fullContext = {}) {
   }
 
   // 13. Cloze Test
-  if (/cloze/i.test(section) || (rawContext && /\(\d{1,3}\)/.test(rawContext))) {
+  const passageSource = (rawContext || dir || '').trim();
+  if (/cloze/i.test(section) || (passageSource && /\(\d{1,3}\)/.test(passageSource))) {
     const blankMatch = text.match(/\b(?:blank\s*)?\(?(\d{1,3})\)?/i) || [null, String(q.questionNumber)];
+    const cleanPassage = passageSource
+      .replace(/^Directions?\s*(?:\([^)]*\))?\s*:?\s*(?:Choose the most suitable word for each blank\.?)?/i, '')
+      .trim();
     return {
       type: 'cloze_test',
       label: 'Cloze Test',
       typeData: {
         blankNumber: blankMatch[1] ? Number(blankMatch[1]) : q.questionNumber,
-        passage: rawContext
+        passage: cleanPassage
       }
     };
   }
