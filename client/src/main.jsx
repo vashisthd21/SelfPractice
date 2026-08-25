@@ -45,7 +45,7 @@ import { ScratchPadModal } from './components/ScratchPadModal';
 import { TypeAnalyticsCard } from './components/TypeAnalyticsCard';
 import './styles.css';
 
-const API = 'http://localhost:5000/api';
+const API = import.meta.env.VITE_API_URL || '/api';
 const api = axios.create({ baseURL: API });
 
 const fmt = (s) => {

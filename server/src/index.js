@@ -790,6 +790,8 @@ app.get('/api/attempts/:id', (req, res) => {
   res.json(a);
 });
 
-app.use(express.static(path.resolve('../client/dist')));
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => console.log(`ExamLens server running on http://localhost:${PORT}`));
+}
 
-app.listen(PORT, () => console.log(`ExamLens server running on http://localhost:${PORT}`));
+export default app;
