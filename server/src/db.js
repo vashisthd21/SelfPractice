@@ -97,7 +97,6 @@ const Exam = mongoose.models.Exam || mongoose.model('Exam', ExamSchema);
 const Attempt = mongoose.models.Attempt || mongoose.model('Attempt', AttemptSchema);
 
 let isMongoConnected = false;
-let cachedPromise = global._mongoosePromise || null;
 
 export async function connectDB() {
   const uri = getMongoUri();
@@ -105,35 +104,30 @@ export async function connectDB() {
     return false;
   }
 
-  if (isMongoConnected && mongoose.connection.readyState === 1) {
+  if (mongoose.connection.readyState === 1) {
+    isMongoConnected = true;
     return true;
   }
 
-  if (!cachedPromise) {
-    mongoose.set('strictQuery', false);
-    cachedPromise = mongoose.connect(uri, {
-      dbName: process.env.MONGODB_DB || 'examlens',
-      serverSelectionTimeoutMS: 8000
-    }).then((m) => {
-      isMongoConnected = true;
-      console.log('✅ Connected to MongoDB Atlas successfully.');
-      return m;
-    }).catch((err) => {
-      cachedPromise = null;
-      global._mongoosePromise = null;
-      isMongoConnected = false;
-      console.warn('⚠️  MongoDB connection error:', err.message);
-      return null;
-    });
-    global._mongoosePromise = cachedPromise;
-  }
-
   try {
-    const conn = await cachedPromise;
-    isMongoConnected = Boolean(conn && mongoose.connection.readyState === 1);
+    mongoose.set('strictQuery', false);
+    if (!global._mongoosePromise || mongoose.connection.readyState === 0) {
+      global._mongoosePromise = mongoose.connect(uri, {
+        dbName: process.env.MONGODB_DB || 'examlens',
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000
+      });
+    }
+    await global._mongoosePromise;
+    isMongoConnected = mongoose.connection.readyState === 1;
+    if (isMongoConnected) {
+      console.log('✅ Connected to MongoDB Atlas successfully.');
+    }
     return isMongoConnected;
-  } catch (e) {
+  } catch (err) {
+    global._mongoosePromise = null;
     isMongoConnected = false;
+    console.warn('⚠️  MongoDB connection error:', err.message);
     return false;
   }
 }
@@ -210,23 +204,32 @@ export async function getAllExams() {
 
 export async function findExamByCode(code) {
   if (!code) return null;
-  const cleanCode = code.trim().toUpperCase();
+  const rawCode = code.toString().trim();
+  const cleanCode = rawCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
   await connectDB();
   if (isMongoConnected && Exam) {
     try {
       const doc = await Exam.findOne({
         $or: [
           { code: cleanCode },
+          { code: rawCode.toUpperCase() },
           { code: new RegExp(`^${cleanCode}$`, 'i') },
-          { id: code },
+          { id: rawCode },
           { id: cleanCode }
         ]
       }).lean();
       if (doc) return doc;
-    } catch (e) {}
+    } catch (e) {
+      console.error('Mongo findExamByCode error:', e.message);
+    }
   }
   const exams = readFileSafe(examsFile, memExams);
-  return exams.find((e) => (e.code && e.code.toUpperCase() === cleanCode) || e.id === code || e.id === cleanCode) || null;
+  return exams.find((e) => {
+    const ec = (e.code || '').toString().trim().toUpperCase();
+    const eid = (e.id || '').toString().trim().toUpperCase();
+    return ec === cleanCode || ec === rawCode.toUpperCase() || eid === cleanCode || eid === rawCode.toUpperCase();
+  }) || null;
 }
 
 export async function saveExam(exam) {
@@ -238,8 +241,9 @@ export async function saveExam(exam) {
       await Exam.findOneAndUpdate(
         { code: exam.code },
         { $set: exam },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
       );
+      console.log(`✅ Exam "${exam.code}" successfully stored in MongoDB Atlas.`);
       return exam;
     } catch (e) {
       console.error('Mongo saveExam error:', e.message);
