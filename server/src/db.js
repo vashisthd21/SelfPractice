@@ -114,8 +114,8 @@ export async function connectDB() {
     if (!global._mongoosePromise || mongoose.connection.readyState === 0) {
       global._mongoosePromise = mongoose.connect(uri, {
         dbName: process.env.MONGODB_DB || 'examlens',
-        serverSelectionTimeoutMS: 10000,
-        connectTimeoutMS: 10000
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 5000
       });
     }
     await global._mongoosePromise;
@@ -127,7 +127,7 @@ export async function connectDB() {
   } catch (err) {
     global._mongoosePromise = null;
     isMongoConnected = false;
-    console.warn('⚠️  MongoDB connection error:', err.message);
+    console.warn('⚠️  MongoDB connection error (Check Atlas Network Access -> 0.0.0.0/0):', err.message);
     return false;
   }
 }
