@@ -3,9 +3,37 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 
 import { PatternBadge, TYPE_CONFIG } from './PatternRenderers';
 import { TrendingUp, AlertTriangle, CheckCircle2, Award } from 'lucide-react';
 
+const SHORT_LABELS = {
+  reading_comprehension: 'RC',
+  vocabulary: 'Vocab',
+  cloze_test: 'Cloze',
+  error_detection: 'Error',
+  fillers: 'Fillers',
+  phrase_replacement: 'Phrase',
+  para_jumble: 'Jumble',
+  puzzle_seating: 'Puzzle',
+  syllogism: 'Syllogism',
+  inequality: 'Inequality',
+  coding_decoding: 'Coding',
+  alphanumeric_series: 'Series',
+  input_output: 'I/O Machine',
+  statement_conclusion: 'Statement',
+  direction_distance: 'Direction',
+  blood_relation: 'Relation',
+  order_ranking: 'Ranking',
+  odd_one_out: 'Odd One',
+  general_mcq: 'MCQ'
+};
+
 export function TypeAnalyticsCard({ typeResults = [] }) {
   // Only display question types that actually exist in this exam (total > 0)
-  const activeTypes = (typeResults || []).filter((t) => (t.total || 0) > 0);
+  const activeTypes = (typeResults || [])
+    .filter((t) => (t.total || 0) > 0)
+    .map((t) => ({
+      ...t,
+      shortLabel: SHORT_LABELS[t.type] || (t.label && t.label.length > 8 ? `${t.label.slice(0, 7)}…` : t.label)
+    }));
+
   if (!activeTypes.length) return null;
 
   // Identify strengths and improvement areas
@@ -42,21 +70,19 @@ export function TypeAnalyticsCard({ typeResults = [] }) {
 
       {/* Bar Chart for Type Accuracy */}
       <div className="type-chart-wrapper">
-        <ResponsiveContainer width="100%" height={190}>
-          <BarChart data={activeTypes} margin={{ top: 10, right: 10, left: -25, bottom: 25 }}>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={activeTypes} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
             <XAxis
-              dataKey="label"
-              tick={{ fontSize: 11, fill: '#64748b' }}
+              dataKey="shortLabel"
+              tick={{ fontSize: 11, fill: '#475569', fontWeight: 600 }}
               interval={0}
-              angle={-15}
-              textAnchor="end"
             />
             <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#64748b' }} unit="%" />
             <Tooltip
-              formatter={(val) => [`${Number(val).toFixed(1)}%`, 'Accuracy']}
+              formatter={(val, name, item) => [`${Number(val).toFixed(1)}% Accuracy (${item?.payload?.label || ''})`, 'Score']}
               contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
             />
-            <Bar dataKey="accuracy" radius={[5, 5, 0, 0]} maxBarSize={45}>
+            <Bar dataKey="accuracy" radius={[6, 6, 0, 0]} maxBarSize={40}>
               {activeTypes.map((entry, index) => {
                 const conf = TYPE_CONFIG[entry.type] || TYPE_CONFIG.general_mcq;
                 return <Cell key={`cell-${index}`} fill={conf.color || '#6366f1'} />;

@@ -2734,62 +2734,189 @@ header {
 }
 
 @media (max-width: 860px) {
-  header { height: 60px; padding: 0 12px; }
-  .brand b { font-size: 15px; max-width: 110px; }
-  .brand small { display: none; }
-  .brandmark { width: 32px; height: 32px; font-size: 16px; }
+  header {
+    height: 56px;
+    padding: 0 10px;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  .brand {
+    gap: 8px;
+  }
+
+  .brand b {
+    font-size: 14.5px;
+    max-width: 110px;
+  }
+
+  .brand small {
+    display: none;
+  }
+
+  .brandmark {
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+    border-radius: 7px;
+  }
+
+  .header-nav-actions {
+    gap: 4px;
+  }
 
   .header-nav-actions .ghost {
-    padding: 0 8px;
-    height: 32px;
+    padding: 0 7px;
+    height: 30px;
     font-size: 11.5px;
   }
 
-  .exam-header-actions { gap: 6px; }
-  .timer { height: 34px; padding: 0 8px; font-size: 12px; gap: 4px; }
-  .scratchpad-trigger { height: 34px; padding: 0 9px; font-size: 12px; }
-  .btn-label-desktop { display: none; }
-  .btn-label-mobile { display: inline; }
-  .palette-toggle { display: inline-flex; height: 34px; padding: 0 9px; font-size: 12px; }
-  .submit-btn { height: 34px; padding: 0 10px; font-size: 12px; }
+  .user-profile-header-group {
+    gap: 4px;
+  }
+
+  .user-pill-badge {
+    padding: 2px 5px;
+    gap: 5px;
+  }
+
+  .user-avatar-circle {
+    width: 24px;
+    height: 24px;
+    font-size: 11.5px;
+  }
+
+  .user-info-text {
+    display: none;
+  }
+
+  .signout-btn {
+    height: 30px;
+    padding: 0 6px;
+  }
+
+  .signout-btn span {
+    display: none;
+  }
+
+  .auth-header-buttons {
+    gap: 4px;
+  }
+
+  .signin-trigger-btn {
+    height: 30px;
+    padding: 0 6px;
+    font-size: 11px;
+  }
+
+  .signin-trigger-btn span {
+    display: none;
+  }
+
+  .signup-trigger-btn {
+    height: 30px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .exam-header {
+    height: 52px;
+    padding: 0 8px;
+    gap: 4px;
+    justify-content: space-between;
+  }
+
+  .exam-brand {
+    gap: 6px;
+  }
+
+  .exam-brand .brand-text-block {
+    max-width: 80px;
+  }
+
+  .exam-brand b {
+    font-size: 12.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    line-height: 1.2;
+  }
+
+  .candidate-name-badge {
+    display: none;
+  }
+
+  .exam-header-actions {
+    gap: 4px;
+  }
+
+  .timer {
+    height: 30px;
+    padding: 0 6px;
+    font-size: 11.5px;
+    gap: 3px;
+  }
+
+  .scratchpad-trigger,
+  .palette-toggle {
+    height: 30px;
+    padding: 0 6px;
+    font-size: 11px;
+    gap: 2px;
+  }
+
+  .btn-label-desktop,
+  .btn-label-mobile,
+  .palette-toggle span {
+    display: none;
+  }
+
+  .submit-btn {
+    height: 30px;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 7px;
+  }
 
   .exam-layout { display: block; min-height: auto; }
-  .exam-main { padding: 18px 14px calc(105px + env(safe-area-inset-bottom)); border-right: 0; }
-  .question-title { font-size: 17px; line-height: 1.45; }
+  .exam-main { padding: 16px 12px calc(100px + env(safe-area-inset-bottom)); border-right: 0; }
+  .question-title { font-size: 16.5px; line-height: 1.45; }
 
   .exam-actions {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-top: 1px solid var(--border-color);
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
     box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.1);
     z-index: 50;
     margin: 0;
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
   }
 
   .exam-actions .secondary,
   .exam-actions .primary,
   .exam-actions .reviewbtn {
-    height: 44px;
-    font-size: 13.5px;
-    padding: 0 10px;
-    border-radius: 10px;
+    height: 42px;
+    font-size: 13px;
+    padding: 0 8px;
+    border-radius: 9px;
     flex: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 4px;
   }
 
-  .exam-actions .clear-btn { flex: 0 0 44px; padding: 0; border-radius: 10px; }
+  .exam-actions .clear-btn { flex: 0 0 40px; padding: 0; border-radius: 9px; }
   .exam-actions .clear-btn span { display: none; }
 
   .palette-backdrop {
@@ -2845,39 +2972,9 @@ header {
 }
 
 @media (max-width: 480px) {
-  .exam-header {
-    height: 56px;
-    padding: 0 10px;
-  }
-
-  .exam-brand {
-    gap: 8px;
-  }
-
-  .exam-brand b {
+  .brand b {
     font-size: 13.5px;
-    max-width: 90px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .candidate-name-badge {
-    display: none;
-  }
-
-  .timer {
-    font-size: 12.5px;
-    padding: 0 8px;
-    height: 32px;
-  }
-
-  .palette-toggle,
-  .scratchpad-trigger,
-  .submit-btn {
-    height: 32px;
-    padding: 0 8px;
-    font-size: 11.5px;
+    max-width: 85px;
   }
 
   .option-btn {
@@ -2894,7 +2991,7 @@ header {
   }
 
   .join-exam-wrapper {
-    padding: 20px 16px;
+    padding: 18px 14px;
     border-radius: 16px;
   }
 

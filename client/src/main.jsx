@@ -551,15 +551,24 @@ function App() {
                       <b>My Exam History ({myAttempts.length})</b>
                     </div>
                     <div className="quick-exams-list">
-                      {myAttempts.slice(0, 3).map((a) => (
-                        <div key={a.id} className="quick-exam-item">
-                          <div>
-                            <b>{a.examTitle}</b>
-                            <small>Score: <b>{Number(a.score).toFixed(2)}</b>/{a.maxScore} · {a.accuracy.toFixed(0)}% Acc</small>
+                      {myAttempts.slice(0, 5).map((a, i) => {
+                        const score = a.result?.score ?? a.score ?? 0;
+                        const maxScore = a.result?.maxScore ?? a.maxScore ?? 0;
+                        const accuracy = a.result?.accuracy ?? a.accuracy ?? 0;
+                        return (
+                          <div key={a.id || `att_${i}`} className="quick-exam-item">
+                            <div>
+                              <b>{a.examTitle || 'Practice Exam'}</b>
+                              <small>
+                                Score: <b>{Number(score).toFixed(2)}</b>/{maxScore} · {Number(accuracy).toFixed(0)}% Acc
+                              </small>
+                            </div>
+                            <span className="attempt-date-tag">
+                              {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : 'Recent'}
+                            </span>
                           </div>
-                          <span className="attempt-date-tag">{new Date(a.submittedAt).toLocaleDateString()}</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
