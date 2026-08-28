@@ -888,19 +888,32 @@ export function DirectionDistanceView({ question, selectedOption, onSelectOption
 
 // Universal Option List
 export function OptionList({ options, selectedOption, onSelectOption }) {
+  if (!options || typeof options !== 'object' || Object.keys(options).length === 0) {
+    return (
+      <div className="no-options-notice">
+        <span>No specific multiple-choice options provided for this question.</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="answers-grid">
-      {Object.entries(options || {}).map(([key, val]) => {
+    <div className="answers-grid" role="radiogroup" aria-label="Question Options">
+      {Object.entries(options).map(([key, val]) => {
         const isSelected = selectedOption === key;
+        const cleanVal = typeof val === 'string' ? val.trim() : String(val || '');
         return (
           <button
             key={key}
             type="button"
+            role="radio"
+            aria-checked={isSelected}
             className={`option-btn ${isSelected ? 'selected' : ''}`}
             onClick={() => onSelectOption(isSelected ? null : key)}
           >
-            <span className="option-radio">{isSelected ? '✓' : key}</span>
-            <span className="option-text">{val}</span>
+            <span className="option-radio">
+              {isSelected ? <CheckCircle2 size={16} className="selected-check-icon" /> : key}
+            </span>
+            <span className="option-text">{cleanVal}</span>
           </button>
         );
       })}

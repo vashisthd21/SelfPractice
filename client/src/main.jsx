@@ -511,22 +511,33 @@ function App() {
                       <b>My Hosted Exams ({myCreatedExams.length})</b>
                     </div>
                     <div className="quick-exams-list">
-                      {myCreatedExams.slice(0, 3).map((e) => (
+                      {myCreatedExams.map((e) => (
                         <div key={e.code} className="quick-exam-item">
                           <div>
                             <b>{e.title}</b>
-                            <small>Code: <code>{e.code}</code> · {e.totalAttempts} submissions</small>
+                            <small>Code: <code>{e.code}</code></small>
                           </div>
-                          <button
-                            type="button"
-                            className="secondary btn-xs"
-                            onClick={() => {
-                              setActiveDashboardCode(e.code);
-                              setScreen('creator-dashboard');
-                            }}
-                          >
-                            Leaderboard →
-                          </button>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              type="button"
+                              className="primary btn-xs"
+                              onClick={() => {
+                                setInitialCodeParam(e.code);
+                              }}
+                            >
+                              Join Exam →
+                            </button>
+                            <button
+                              type="button"
+                              className="secondary btn-xs"
+                              onClick={() => {
+                                setActiveDashboardCode(e.code);
+                                setScreen('creator-dashboard');
+                              }}
+                            >
+                              Leaderboard
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

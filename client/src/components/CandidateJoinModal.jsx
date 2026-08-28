@@ -38,15 +38,18 @@ export function CandidateJoinModal({ initialCode, onStartExam, onCancel }) {
   }, []);
 
   const fetchExamDetails = async (examCode) => {
-    if (!examCode || examCode.trim().length < 4) return;
+    const clean = (examCode || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!clean || clean.length < 3) return null;
     setLoading(true);
     setError('');
     try {
-      const res = await api.get(`/exams/${examCode.trim().toUpperCase()}`);
+      const res = await api.get(`/exams/${clean}`);
       setExamData(res.data);
+      return res.data;
     } catch (e) {
-      setError(e.response?.data?.message || 'Invalid exam code. Please check and try again.');
+      setError(e.response?.data?.message || `No exam found for code "${clean}". Please verify with creator.`);
       setExamData(null);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -54,8 +57,9 @@ export function CandidateJoinModal({ initialCode, onStartExam, onCancel }) {
 
   useEffect(() => {
     if (initialCode) {
-      setCode(initialCode.toUpperCase());
-      fetchExamDetails(initialCode);
+      const clean = initialCode.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      setCode(clean);
+      fetchExamDetails(clean);
     }
   }, [initialCode]);
 
@@ -65,9 +69,10 @@ export function CandidateJoinModal({ initialCode, onStartExam, onCancel }) {
     }
   };
 
-  const handleStart = (e) => {
+  const handleStart = async (e) => {
     e.preventDefault();
-    if (!code.trim()) {
+    const clean = (code || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!clean) {
       setError('Please enter a valid exam code');
       return;
     }
@@ -75,13 +80,19 @@ export function CandidateJoinModal({ initialCode, onStartExam, onCancel }) {
       setError('Please enter your full name to begin the exam');
       return;
     }
-    if (!examData) {
-      fetchExamDetails(code).then(() => {
-        if (examData) onStartExam({ exam: examData, candidateName: name.trim(), candidateEmail: email.trim() });
-      });
-      return;
+
+    let activeExam = examData;
+    if (!activeExam || (activeExam.code && activeExam.code.toUpperCase() !== clean)) {
+      activeExam = await fetchExamDetails(clean);
     }
-    onStartExam({ exam: examData, candidateName: name.trim(), candidateEmail: email.trim() });
+
+    if (activeExam) {
+      onStartExam({
+        exam: activeExam,
+        candidateName: name.trim(),
+        candidateEmail: email.trim()
+      });
+    }
   };
 
   return (
@@ -99,22 +110,24 @@ export function CandidateJoinModal({ initialCode, onStartExam, onCancel }) {
       <form onSubmit={handleStart} className="join-form">
         <div className="form-group">
           <label>EXAM CODE</label>
-          <div className="input-with-icon">
-            <KeyRound size={16} className="input-icon" />
-            <input
-              type="text"
-              placeholder="e.g. 8K2P9Q"
-              value={code}
-              maxLength={10}
-              onChange={(e) => {
-                const val = e.target.value.toUpperCase();
-                setCode(val);
-                if (val.length === 6) fetchExamDetails(val);
-              }}
-              onBlur={handleCodeBlur}
-              className="code-input"
-              required
-            />
+          <div className="code-entry-row">
+            <div className="input-with-icon code-input-field-wrap">
+              <KeyRound size={16} className="input-icon" />
+              <input
+                type="text"
+                placeholder="e.g. S3GAC9"
+                value={code}
+                maxLength={10}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase().replace(/\s+/g, '');
+                  setCode(val);
+                  if (val.length >= 6) fetchExamDetails(val);
+                }}
+                onBlur={handleCodeBlur}
+                className="code-input"
+                required
+              />
+            </div>
             <button
               type="button"
               className="check-code-btn secondary"

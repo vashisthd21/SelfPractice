@@ -228,10 +228,16 @@ export async function findExamByCode(code) {
 }
 
 export async function saveExam(exam) {
+  if (!exam || !exam.code) return exam;
+  exam.code = exam.code.toString().trim().toUpperCase();
   await connectDB();
   if (isMongoConnected && Exam) {
     try {
-      await Exam.findOneAndUpdate({ code: exam.code }, exam, { upsert: true, new: true });
+      await Exam.findOneAndUpdate(
+        { code: exam.code },
+        { $set: exam },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
       return exam;
     } catch (e) {
       console.error('Mongo saveExam error:', e.message);

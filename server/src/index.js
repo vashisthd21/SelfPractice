@@ -1132,7 +1132,8 @@ app.get('/api/attempts/my-attempts', async (req, res) => {
 
 // Candidate Fetch Exam (Stripping answerKey)
 app.get('/api/exams/:code', async (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
+  const rawCode = req.params.code || '';
+  const code = decodeURIComponent(rawCode).trim().toUpperCase();
   const exam = await findExamByCode(code);
 
   if (!exam) {
