@@ -5,8 +5,10 @@ import path from 'path';
 
 dotenv.config();
 
+const DEFAULT_MONGO_URI = 'mongodb+srv://deepakvashisth2102_db_user:Deepak2113@cluster0.vcltoxd.mongodb.net/?retryWrites=true&w=majority';
+
 function getMongoUri() {
-  let rawUri = process.env.MONGODB_URI || process.env.DATABASE_URL || process.env.MONGO_URL || '';
+  let rawUri = process.env.MONGODB_URI || process.env.DATABASE_URL || process.env.MONGO_URL || DEFAULT_MONGO_URI;
   // Auto-sanitize if password was pasted with angle brackets: :<password>@ -> :password@
   if (rawUri && /:<([^>]+)>@/.test(rawUri)) {
     rawUri = rawUri.replace(/:<([^>]+)>@/, ':$1@');
