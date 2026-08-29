@@ -1025,6 +1025,26 @@ app.post('/api/exams/create', async (req, res) => {
     const adminKey = `adm_${crypto.randomBytes(12).toString('hex')}`;
     const id = `exam_${Date.now().toString(36)}`;
 
+    // Structure and embed options and answers into each question
+    const structuredQuestions = (questions || []).map((q) => {
+      const qNum = Number(q.questionNumber);
+      const ans = (answerKey[qNum] || answerKey[String(qNum)] || q.answer || q.correctAnswer || '').toString().trim().toUpperCase();
+      return {
+        questionNumber: qNum,
+        questionText: q.questionText || '',
+        options: q.options || {},
+        answer: ans,
+        correctAnswer: ans,
+        correctOption: ans,
+        section: q.section || '',
+        directions: q.directions || '',
+        passage: q.passage || '',
+        questionType: q.questionType || 'general_mcq',
+        questionTypeLabel: q.questionTypeLabel || 'Multiple Choice',
+        typeData: q.typeData || {}
+      };
+    });
+
     const examRecord = {
       id,
       code,
@@ -1040,7 +1060,8 @@ app.post('/api/exams/create', async (req, res) => {
         negativeMarks: Number(config?.negativeMarks) || 0.25,
         cutoffMarks: Number(config?.cutoffMarks) || 0
       },
-      questions,
+      totalQuestions: structuredQuestions.length,
+      questions: structuredQuestions,
       answerKey
     };
 
@@ -1053,7 +1074,7 @@ app.post('/api/exams/create', async (req, res) => {
         code: examRecord.code,
         title: examRecord.title,
         creatorName: examRecord.creatorName,
-        totalQuestions: questions.length,
+        totalQuestions: structuredQuestions.length,
         config: examRecord.config,
         createdAt: examRecord.createdAt
       },

@@ -59,6 +59,21 @@ const UserSchema = new mongoose.Schema({
   createdAt: { type: String, default: () => new Date().toISOString() }
 }, { timestamps: true });
 
+const QuestionSchema = new mongoose.Schema({
+  questionNumber: { type: Number, required: true },
+  questionText: { type: String, default: '' },
+  options: { type: Object, default: {} },
+  answer: { type: String, default: '' },
+  correctAnswer: { type: String, default: '' },
+  correctOption: { type: String, default: '' },
+  section: { type: String, default: '' },
+  directions: { type: String, default: '' },
+  passage: { type: String, default: '' },
+  questionType: { type: String, default: 'general_mcq' },
+  questionTypeLabel: { type: String, default: 'Multiple Choice' },
+  typeData: { type: Object, default: {} }
+}, { _id: false });
+
 const ExamSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true, index: true },
   code: { type: String, required: true, unique: true, index: true },
@@ -74,9 +89,10 @@ const ExamSchema = new mongoose.Schema({
     negativeMarks: { type: Number, default: 0.25 },
     cutoffMarks: { type: Number, default: 0 }
   },
-  questions: { type: Array, default: [] },
+  totalQuestions: { type: Number, default: 0 },
+  questions: { type: [QuestionSchema], default: [] },
   answerKey: { type: Object, default: {} }
-}, { timestamps: true });
+}, { timestamps: true, strict: false });
 
 const AttemptSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true, index: true },
